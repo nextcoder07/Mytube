@@ -1,0 +1,17 @@
+Summarize this content for a learner:
+Title: {{title}}
+Description: {{description}}
+URL: {{url}}
+
+You MUST respond with a valid JSON object ONLY. Do not include markdown formatting like ```json or any other text before/after the JSON.
+Follow this schema exactly:
+{
+  "summary": "3-5 sentences summary of the content focusing on key learning outcomes",
+  "key_points": [
+    "Key point 1",
+    "Key point 2",
+    "Key point 3",
+    "Key point 4",
+    "Key point 5"
+  ]
+}

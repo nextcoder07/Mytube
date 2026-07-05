@@ -1,0 +1,18 @@
+// providers/youtube/fetch.ts — Fetch a single YouTube video by ID
+import { Content } from '../../models/content.model';
+import { normalizeVideo } from './normalize';
+
+export async function fetchYouTubeVideo(videoId: string): Promise<Content | null> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey || apiKey.includes('your-') || apiKey === 'AIzaSy...') return null;
+
+  const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+
+  const data: any = await res.json();
+  const item = data.items?.[0];
+  if (!item) return null;
+
+  return normalizeVideo(item);
+}

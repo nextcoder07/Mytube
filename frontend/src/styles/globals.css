@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+:root {
+  --color-brand-primary: #8b5cf6; /* violet-500 */
+  --color-brand-secondary: #ec4899; /* pink-500 */
+  --color-brand-dark: #0f0f17; /* rich dark slate */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f0f17;
+}
+::-webkit-scrollbar-thumb {
+  background: #312e81;
+  border-radius: 4px;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4f46e5;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #09090e;
+  color: #f3f4f6;
+  overflow-x: hidden;
+}
+
+/* Premium Glow Utilities */
+.glow-card {
+  position: relative;
+  background: rgba(17, 17, 27, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 1rem;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glow-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.3);
+}
+
+/* Neon buttons */
+.btn-neon {
+  position: relative;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: white;
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+}
+
+.btn-neon:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+}
+
+/* Glass panel */
+.glass-panel {
+  background: rgba(10, 10, 18, 0.6);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Text glow */
+.text-glow {
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}

@@ -1,0 +1,16 @@
+Curate a learning playlist for a user based on their goal and available content.
+
+Goal: {{goal}}
+Level: {{level}}
+
+Available content items:
+{{candidates}}
+
+Select the best 10 items and return as JSON:
+{
+  "title": "Descriptive playlist title",
+  "description": "One-sentence description",
+  "contentIds": ["id1", "id2", ...]
+}
+
+Order items from foundational → advanced. Only include the most relevant items.

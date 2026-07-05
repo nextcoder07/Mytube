@@ -1,0 +1,23 @@
+Create a structured learning roadmap for:
+Goal: {{goal}}
+Level: {{level}}
+Time: {{timePerWeek}} hours/week
+Target: {{targetDate}}
+
+Analyze the user's goal and level, and structure the learning path into logical phases.
+Each phase must contain a title, duration (e.g. "Week 1-2"), topics to cover, and suggested resource queries.
+
+You MUST respond with a valid JSON object ONLY. Do not include markdown formatting like ```json or any other text before/after the JSON.
+Follow this schema exactly:
+{
+  "title": "Roadmap title matching the goal",
+  "description": "Overview of the learning roadmap",
+  "phases": [
+    {
+      "title": "Phase title",
+      "duration": "Duration description",
+      "topics": ["topic 1", "topic 2"],
+      "resources": ["query for YouTube/GitHub to learn this topic"]
+    }
+  ]
+}
