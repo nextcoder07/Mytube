@@ -26,5 +26,5 @@ export const summaryWorker = new Worker(
       model_used: process.env.AI_PROVIDER ?? 'gemini',
     });
   },
-  { connection: redis },
+  { connection: redis as any },
 );

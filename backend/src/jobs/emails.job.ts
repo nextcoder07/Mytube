@@ -15,5 +15,5 @@ export const emailsWorker = new Worker(
     // TODO: integrate an email provider (e.g. Resend / SendGrid)
     logger.info(`[emails] Sending ${type} email to ${to}: ${subject}`);
   },
-  { connection: redis },
+  { connection: redis as any },
 );

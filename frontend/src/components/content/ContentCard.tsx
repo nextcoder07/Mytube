@@ -6,21 +6,15 @@ import {
   BookOpenIcon,
   CodeBracketIcon,
   ChatBubbleBottomCenterTextIcon,
-  BookmarkIcon,
-  DocumentPlusIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 
 export default function ContentCard({
   content,
-  onSummary,
-  onNote,
-  onSave,
+  onClick,
 }: {
   content: Content;
-  onSummary?: (id: string) => void;
-  onNote?: (id: string) => void;
-  onSave?: (id: string) => void;
+  onClick?: (content: Content) => void;
 }) {
 
   const sourceColors: Record<string, string> = {
@@ -49,7 +43,10 @@ export default function ContentCard({
   };
 
   return (
-    <div className="glow-card flex flex-col h-full overflow-hidden">
+    <div 
+      className="glow-card flex flex-col h-full overflow-hidden cursor-pointer hover:border-violet-500/50 transition-colors"
+      onClick={() => onClick && onClick(content)}
+    >
       {/* Thumbnail or Icon container */}
       <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center group">
         {content.thumbnail ? (
@@ -82,9 +79,7 @@ export default function ContentCard({
       {/* Details info */}
       <div className="flex-1 p-4 flex flex-col">
         <h3 className="text-base font-bold line-clamp-2 text-white group-hover:text-violet-400 transition-colors mb-1.5">
-          <a href={content.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-            {content.title}
-          </a>
+          {content.title}
         </h3>
 
         {content.author && (
@@ -96,7 +91,7 @@ export default function ContentCard({
         </p>
 
         {/* Metadata stats */}
-        <div className="flex items-center gap-3 text-xs text-gray-500 mb-4 border-t border-gray-900 pt-3">
+        <div className="flex items-center gap-3 text-xs text-gray-500 mb-4 border-t border-gray-900 pt-3 mt-auto">
           {content.source === "github" && content.metadata.stars !== undefined && (
             <span>⭐ {content.metadata.stars.toLocaleString()} stars</span>
           )}
@@ -115,7 +110,7 @@ export default function ContentCard({
 
         {/* AI Explanation block if available */}
         {content.metadata.aiExplanation && (
-          <div className="mb-4 p-2.5 bg-violet-950/20 border border-violet-500/20 rounded-lg">
+          <div className="mt-2 p-2.5 bg-violet-950/20 border border-violet-500/20 rounded-lg">
             <div className="flex items-center gap-1.5 text-xs text-violet-400 font-bold mb-1">
               <SparklesIcon className="h-4.5 w-4.5" />
               <span>AI Recommendation Context</span>
@@ -125,34 +120,6 @@ export default function ContentCard({
             </p>
           </div>
         )}
-
-        {/* Bottom Actions grid */}
-        <div className="grid grid-cols-3 gap-2 mt-auto pt-2 border-t border-gray-900/60">
-          <button
-            onClick={() => onSummary && onSummary(content.id)}
-            className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-xs font-semibold text-violet-400 hover:text-white transition-all duration-200"
-            title="Generate AI Summary"
-          >
-            <SparklesIcon className="h-4 w-4" />
-            <span>AI Summarize</span>
-          </button>
-          <button
-            onClick={() => onNote && onNote(content.id)}
-            className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-xs font-semibold text-pink-400 hover:text-white transition-all duration-200"
-            title="Create Study Note"
-          >
-            <DocumentPlusIcon className="h-4 w-4" />
-            <span>Note</span>
-          </button>
-          <button
-            onClick={() => onSave && onSave(content.id)}
-            className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-gray-300 hover:text-white transition-all duration-200"
-            title="Add to Playlist"
-          >
-            <BookmarkIcon className="h-4 w-4" />
-            <span>Save</span>
-          </button>
-        </div>
       </div>
     </div>
   );

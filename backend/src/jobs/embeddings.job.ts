@@ -10,5 +10,5 @@ export const embeddingsWorker = new Worker(
     // TODO: integrate a vector embedding service (e.g. Supabase pgvector / Pinecone)
     logger.info(`[embeddings] Embedding job for content ${contentId} — placeholder`);
   },
-  { connection: redis },
+  { connection: redis as any },
 );

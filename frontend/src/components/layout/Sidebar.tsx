@@ -1,6 +1,9 @@
-// src/components/layout/Sidebar.tsx
-import React from "react";
+'use client';
+
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSidebar } from "@/context/SidebarContext";
 import {
   HomeIcon,
   PlayCircleIcon,
@@ -12,6 +15,8 @@ import {
   DocumentTextIcon,
   ChartBarIcon,
   Squares2X2Icon,
+  ChevronLeftIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 const navigation = [
@@ -28,20 +33,139 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  return (
-    <aside className="hidden md:block w-64 bg-gray-900/40 backdrop-blur-lg border-r border-gray-800 overflow-y-auto">
-      <nav className="flex flex-col p-4 space-y-1.5">
-        {navigation.map((item) => (
-          <Link
-            key={item.name}
-            href={item.href}
-            className="flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-violet-600/20 hover:text-white hover:border-l-4 hover:border-violet-500 transition-all duration-200"
-          >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            <span>{item.name}</span>
-          </Link>
-        ))}
+  const pathname = usePathname();
+  const {
+    isCollapsed,
+    setIsCollapsed,
+    width,
+    setWidth,
+    isMobileOpen,
+    setIsMobileOpen,
+  } = useSidebar();
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback(
+    (e: MouseEvent) => {
+      if (isResizing) {
+        setWidth(e.clientX);
+      }
+    },
+    [isResizing, setWidth]
+  );
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stopResizing);
+    }
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
+
+  // Sidebar content component to reuse for desktop & mobile drawer
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-gray-950/90 dark:bg-gray-900/60 backdrop-blur-lg border-r border-gray-200 dark:border-gray-800 relative group/sidebar">
+      {/* Header section with toggle button */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</span>
+        
+        {/* Collapse Button (Desktop) */}
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="hidden md:flex p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+          title="Collapse Sidebar"
+        >
+          <ChevronLeftIcon className="h-5 w-5" />
+        </button>
+
+        {/* Close Button (Mobile) */}
+        <button
+          onClick={() => setIsMobileOpen(false)}
+          className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+          title="Close Navigation"
+        >
+          <XMarkIcon className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Navigation Links */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => setIsMobileOpen(false)} // Auto-close drawer on link click
+              className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                isActive
+                  ? "bg-violet-600 text-white shadow-md shadow-violet-600/20 border-l-4 border-violet-400"
+                  : "text-gray-400 hover:text-white hover:bg-violet-600/10 hover:border-l-4 hover:border-violet-500/50"
+              }`}
+            >
+              <item.icon className={`h-5 w-5 flex-shrink-0 ${isActive ? "text-white" : "text-gray-400 group-hover:text-white"}`} />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          );
+        })}
       </nav>
-    </aside>
+
+      {/* Resizing handle (Desktop only) */}
+      <div
+        onMouseDown={startResizing}
+        className="hidden md:block absolute top-0 right-0 bottom-0 w-1.5 cursor-col-resize hover:bg-violet-500/50 active:bg-violet-500 transition-colors z-30"
+      />
+    </div>
+  );
+
+  return (
+    <>
+      {/* 1. Desktop Sidebar Container */}
+      <aside
+        style={{
+          width: isCollapsed ? "0px" : `${width}px`,
+          transition: isResizing ? "none" : "width 250ms cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
+        className={`hidden md:block h-full relative overflow-hidden flex-shrink-0 ${
+          isCollapsed ? "border-r-0" : ""
+        }`}
+      >
+        <div 
+          className="h-full w-full"
+          style={{ width: `${width}px` }} // Prevents contents from shrinking while width animate-collapses
+        >
+          <SidebarContent />
+        </div>
+      </aside>
+
+      {/* 2. Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          onClick={() => setIsMobileOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+        />
+      )}
+
+      {/* 3. Mobile Sidebar Overlay Drawer */}
+      <aside
+        className={`md:hidden fixed top-0 bottom-0 left-0 z-50 w-64 h-full transform transition-transform duration-300 ease-in-out ${
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

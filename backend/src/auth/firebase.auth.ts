@@ -1,5 +1,5 @@
 // src/auth/firebase.auth.ts — Firebase Admin token verification
-import { adminAuth } from '../config/firebase';
+import { firebaseAuth } from '../config/firebase';
 
 export interface DecodedUser {
   uid: string;
@@ -9,7 +9,7 @@ export interface DecodedUser {
 }
 
 export async function verifyIdToken(idToken: string): Promise<DecodedUser> {
-  const decoded = await adminAuth.verifyIdToken(idToken);
+  const decoded = await firebaseAuth.verifyIdToken(idToken);
   return {
     uid: decoded.uid,
     email: decoded.email ?? '',

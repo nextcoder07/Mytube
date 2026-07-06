@@ -2,18 +2,15 @@
 import React from "react";
 import { Content } from "../../types/content";
 import ContentCard from "./ContentCard";
+import { usePlayerStore } from "../../store/player.store";
 
 export default function ContentGrid({
   items,
-  onSummary,
-  onNote,
-  onSave,
 }: {
   items: Content[];
-  onSummary?: (id: string) => void;
-  onNote?: (id: string) => void;
-  onSave?: (id: string) => void;
 }) {
+  const { play } = usePlayerStore();
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center text-gray-500">
@@ -28,9 +25,7 @@ export default function ContentGrid({
         <div key={item.id} className="h-full">
           <ContentCard
             content={item}
-            onSummary={onSummary}
-            onNote={onNote}
-            onSave={onSave}
+            onClick={(c) => play(c, items)}
           />
         </div>
       ))}

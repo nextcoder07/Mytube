@@ -23,5 +23,5 @@ export const analyticsWorker = new Worker(
       logger.info(`[analytics] Wrote ${rows.length} events`);
     }
   },
-  { connection: redis },
+  { connection: redis as any },
 );

@@ -18,7 +18,9 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
       ? (req.query.providers as string).split(",")
       : undefined;
 
-    const results = await SearchService.search(user.uid, query, { providers });
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+
+    const results = await SearchService.search(user.uid, query, { providers, limit });
     res.status(200).json(success(results, "Search completed"));
   } catch (err: any) {
     next(err);
@@ -35,7 +37,12 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
       return next(new HttpError(400, "Query body parameter is required"));
     }
 
-    const results = await SearchService.searchAI(user.uid, query, { providers });
+    const options = {
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+      pageToken: req.query.pageToken as string | undefined,
+      after: req.query.after as string | undefined,
+    };
+    const results = await SearchService.search(user.uid, query, { ...options, providers });
     res.status(200).json(success(results, "AI Search completed"));
   } catch (err: any) {
     next(err);

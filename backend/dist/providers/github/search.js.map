@@ -1,0 +1,1 @@
+{"version":3,"file":"search.js","sourceRoot":"","sources":["../../../src/providers/github/search.ts"],"names":[],"mappings":";;AAMA,oCAEC;AAND,mCAAyC;AAEzC,MAAM,QAAQ,GAAG,IAAI,sBAAc,EAAE,CAAC;AAE/B,KAAK,UAAU,YAAY,CAAC,KAAa,EAAE,OAAuB;IACvE,OAAO,QAAQ,CAAC,MAAM,CAAC,KAAK,EAAE,OAAO,CAAC,CAAC;AACzC,CAAC"}

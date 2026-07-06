@@ -17,18 +17,32 @@ export class GitHubProvider implements ContentProvider {
     }
 
     try {
-      const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(
-        query
-      )}&per_page=${options?.limit || 10}`;
+      const totalToFetch = options?.limit || 25;
+      let allItems: any[] = [];
+      let page = 1;
+      let fetched = 0;
 
-      const res = await fetch(url, { headers });
-      if (!res.ok) {
-        throw new Error(`GitHub API returned status ${res.status}`);
+      while (fetched < totalToFetch) {
+        const perPage = Math.min(100, totalToFetch - fetched); // GitHub max is 100
+        const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(
+          query
+        )}&sort=best-match&per_page=${perPage}&page=${page}`;
+
+        const res = await fetch(url, { headers });
+        if (!res.ok) {
+          throw new Error(`GitHub API returned status ${res.status}`);
+        }
+        const data: any = await res.json();
+        const items = data.items || [];
+        allItems.push(...items);
+        fetched += items.length;
+
+        // If we got fewer than requested, there are no more pages
+        if (items.length < perPage) break;
+        page++;
       }
-      const data: any = await res.json();
-      const items = data.items || [];
 
-      return items.map((item: any): Content => {
+      return allItems.map((item: any): Content => {
         return {
           id: `github_${item.id}`,
           title: item.full_name,
@@ -38,7 +52,7 @@ export class GitHubProvider implements ContentProvider {
           thumbnail: item.owner?.avatar_url || "https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=500&auto=format&fit=crop&q=60",
           description: item.description,
           author: item.owner?.login,
-          viewCount: item.stargazers_count, // map stars to viewCount
+          viewCount: item.stargazers_count,
           tags: [this.name, item.language].filter(Boolean),
           language: item.language || "en",
           metadata: {
@@ -75,3 +89,4 @@ export class GitHubProvider implements ContentProvider {
     ];
   }
 }
+

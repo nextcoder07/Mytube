@@ -10,5 +10,5 @@ export const recommendationsWorker = new Worker(
     // TODO: call recommendation service to compute + upsert recommendations
     logger.info(`[recommendations] Refreshing recommendations for user ${userId}`);
   },
-  { connection: redis },
+  { connection: redis as any },
 );

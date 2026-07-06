@@ -17,5 +17,5 @@ export const notificationsWorker = new Worker(
     await createNotification(userId, type, title, body);
     logger.info(`[notifications] Created ${type} notification for user ${userId}`);
   },
-  { connection: redis },
+  { connection: redis as any },
 );

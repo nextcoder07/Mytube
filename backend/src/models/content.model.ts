@@ -25,4 +25,5 @@ export interface SearchOptions {
   type?: string;
   page?: number;
   limit?: number;
+  pageToken?: string;
 }

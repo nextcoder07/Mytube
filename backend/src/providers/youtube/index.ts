@@ -13,23 +13,43 @@ export class YouTubeProvider implements ContentProvider {
     }
 
     try {
-      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
-        query
-      )}&type=video&maxResults=${options?.limit || 10}&key=${apiKey}`;
+      const perPage = Math.min(options?.limit || 25, 50); // YouTube max is 50
+      let allItems: any[] = [];
+      let pageToken: string | undefined = options?.pageToken as string | undefined;
+      let totalToFetch = options?.limit || 25;
+      let fetched = 0;
 
-      const res = await fetch(searchUrl);
-      if (!res.ok) {
-        throw new Error(`YouTube API returned status ${res.status}`);
+      // Fetch multiple pages if needed
+      while (fetched < totalToFetch) {
+        const batchSize = Math.min(perPage, totalToFetch - fetched);
+        let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
+          query
+        )}&type=video&order=relevance&maxResults=${batchSize}&key=${apiKey}`;
+
+        if (pageToken) {
+          searchUrl += `&pageToken=${pageToken}`;
+        }
+
+        const res = await fetch(searchUrl);
+        if (!res.ok) {
+          throw new Error(`YouTube API returned status ${res.status}`);
+        }
+        const data: any = await res.json();
+        const items = data.items || [];
+        allItems.push(...items);
+        fetched += items.length;
+
+        pageToken = data.nextPageToken;
+        if (!pageToken || items.length === 0) break; // no more pages
       }
-      const data: any = await res.json();
 
-      const items = data.items || [];
-      const videoIds = items.map((item: any) => item.id.videoId).filter(Boolean);
+      const videoIds = allItems.map((item: any) => item.id.videoId).filter(Boolean);
 
-      // Fetch durations & views
+      // Fetch durations & views in batches of 50
       let detailsMap: Record<string, { duration: number; views: number }> = {};
-      if (videoIds.length > 0) {
-        const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds.join(
+      for (let i = 0; i < videoIds.length; i += 50) {
+        const batch = videoIds.slice(i, i + 50);
+        const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${batch.join(
           ","
         )}&key=${apiKey}`;
         const detailsRes = await fetch(detailsUrl);
@@ -44,7 +64,7 @@ export class YouTubeProvider implements ContentProvider {
         }
       }
 
-      return items.map((item: any): Content => {
+      return allItems.map((item: any): Content => {
         const videoId = item.id.videoId;
         const details = detailsMap[videoId] || { duration: 0, views: 0 };
         return {
@@ -118,3 +138,4 @@ export class YouTubeProvider implements ContentProvider {
     ];
   }
 }
+
