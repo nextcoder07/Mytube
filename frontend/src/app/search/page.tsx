@@ -1,12 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import SearchBar from '../../components/search/SearchBar';
-import SearchFilters from '../../components/search/SearchFilters';
 import SearchResults from '../../components/search/SearchResults';
 import { useSearch } from '../../hooks/useSearch';
-import type { SearchFiltersState } from '../../types/content';
-
-const ALL_PROVIDERS = ['youtube', 'github', 'reddit', 'medium'];
 
 export default function SearchPage() {
   const { 
@@ -26,15 +22,6 @@ export default function SearchPage() {
   const [inputValue, setInputValue] = useState('');
   const [aiMode, setAiMode] = useState(false);
   const [aiContext, setAiContext] = useState('');
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(ALL_PROVIDERS);
-
-  // Advanced YouTube filters state
-  const [filters, setFilters] = useState<SearchFiltersState>({
-    order: 'relevance',
-    videoDuration: 'any',
-    videoCategoryId: '',
-    relevanceLanguage: 'en',
-  });
 
   // Sync inputs with the current active query (important when traversing query history)
   useEffect(() => {
@@ -53,25 +40,9 @@ export default function SearchPage() {
     setQuery(trimmed);
     search({
       q: trimmed,
-      providers: selectedProviders.join(','),
       aiMode,
       aiContext: aiMode ? aiContext : undefined,
-      // Pass through all YouTube API filters
-      order: filters.order,
-      videoDuration: filters.videoDuration,
-      videoCategoryId: filters.videoCategoryId || undefined,
-      relevanceLanguage: filters.relevanceLanguage,
     });
-  };
-
-  const handleToggle = (id: string) => {
-    setSelectedProviders((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
-    );
-  };
-
-  const handleFilterChange = (key: keyof SearchFiltersState, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -100,12 +71,6 @@ export default function SearchPage() {
         loading={isLoading}
         aiContext={aiContext}
         onAiContextChange={setAiContext}
-      />
-      <SearchFilters
-        selected={selectedProviders}
-        onToggle={handleToggle}
-        filters={filters}
-        onFilterChange={handleFilterChange}
       />
       <SearchResults
         results={results}
