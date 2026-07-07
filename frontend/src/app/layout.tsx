@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Sidebar />
             <main className="flex-1 flex flex-col overflow-hidden relative">
               <MainContentWrapper>
-                <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+                <div className="flex-1 p-4 lg:p-8">
                   {children}
                 </div>
               </MainContentWrapper>

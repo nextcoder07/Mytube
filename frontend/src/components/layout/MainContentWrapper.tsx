@@ -8,11 +8,12 @@ export default function MainContentWrapper({ children }: { children: React.React
   const showFullPlayer = activeContent && !isMinimized;
 
   return (
-    <>
-      <div className={`flex-1 ${showFullPlayer ? 'hidden' : 'block'}`}>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 overflow-y-auto ${showFullPlayer ? 'hidden' : 'flex flex-col'}`}>
         {children}
       </div>
       <GlobalPlayer />
-    </>
+    </div>
   );
 }
+

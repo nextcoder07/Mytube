@@ -95,10 +95,10 @@ export default function GlobalPlayer() {
 
   return (
     <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-hidden animate-in fade-in duration-200"}>
-      
+
       {/* Left/Main Section for Maximized OR PIP wrapper for Minimized */}
       <div className={isMinimized ? "w-full flex flex-col" : "flex-1 flex flex-col overflow-y-auto"}>
-        
+
         {/* PIP Header */}
         {isMinimized && (
           <div className="flex items-center justify-between p-2 bg-gray-900 border-b border-gray-800">
@@ -141,27 +141,27 @@ export default function GlobalPlayer() {
               allowFullScreen
             ></iframe>
           ) : (
-             <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-               {/* Browser Header */}
-               <div className="w-full bg-gray-100 border-b border-gray-300 p-2 flex items-center justify-between text-black text-sm relative z-10">
-                 <div className="truncate px-2 font-medium text-gray-700 text-xs w-[65%]">{activeContent.url}</div>
-                 <a 
-                   href={activeContent.url} 
-                   target="_blank" 
-                   rel="noopener noreferrer" 
-                   className="shrink-0 px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded font-medium transition-colors text-xs shadow"
-                 >
-                   Open in New Tab
-                 </a>
-               </div>
-               {/* Webpage Viewer */}
-               <iframe
-                 className="w-full flex-1"
-                 src={activeContent.url}
-                 title="Webpage Viewer"
-                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-               ></iframe>
-             </div>
+            <div className="w-full h-full flex flex-col bg-white overflow-hidden">
+              {/* Browser Header */}
+              <div className="w-full bg-gray-100 border-b border-gray-300 p-2 flex items-center justify-between text-black text-sm relative z-10">
+                <div className="truncate px-2 font-medium text-gray-700 text-xs w-[65%]">{activeContent.url}</div>
+                <a
+                  href={activeContent.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded font-medium transition-colors text-xs shadow"
+                >
+                  Open in New Tab
+                </a>
+              </div>
+              {/* Webpage Viewer */}
+              <iframe
+                className="w-full flex-1"
+                src={activeContent.url}
+                title="Webpage Viewer"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              ></iframe>
+            </div>
           )}
         </div>
 
@@ -170,7 +170,7 @@ export default function GlobalPlayer() {
           <>
             <div className="p-4 md:p-6 lg:px-8 border-b border-gray-800">
               <h1 className="text-xl md:text-2xl font-bold text-white mb-2">{activeContent.title}</h1>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
                 {/* Author & Stats */}
                 <div className="flex items-center gap-4 text-sm text-gray-400 font-medium">
@@ -230,36 +230,36 @@ export default function GlobalPlayer() {
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">
               <button onClick={previous} className="p-1.5 hover:bg-gray-800 rounded-md text-gray-400 transition-colors">
-                 <ChevronLeftIcon className="w-5 h-5"/>
+                <ChevronLeftIcon className="w-5 h-5" />
               </button>
-               <button onClick={next} className="p-1.5 hover:bg-gray-800 rounded-md text-gray-400 transition-colors">
-                 <ChevronRightIcon className="w-5 h-5"/>
+              <button onClick={next} className="p-1.5 hover:bg-gray-800 rounded-md text-gray-400 transition-colors">
+                <ChevronRightIcon className="w-5 h-5" />
               </button>
             </div>
           </div>
-          
+
           {/* Horizontal scroll on mobile, vertical on desktop */}
           <div className="flex-1 overflow-x-auto xl:overflow-y-auto p-4 flex flex-row xl:flex-col gap-4">
-             {queue.filter(q => q.id !== activeContent.id).map((item) => (
-               <div 
-                 key={item.id} 
-                 onClick={() => play(item)}
-                 className="min-w-[260px] xl:min-w-0 flex flex-col xl:flex-row gap-3 group cursor-pointer"
-               >
-                 <div className="relative w-full xl:w-40 aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
-                    {item.thumbnail ? (
-                      <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{item.source}</div>
-                    )}
-                 </div>
-                 <div className="flex flex-col py-1 overflow-hidden">
-                   <p className="text-sm font-semibold text-gray-200 group-hover:text-violet-400 line-clamp-2 leading-snug">{item.title}</p>
-                   <p className="text-xs text-gray-500 mt-1 font-medium">{item.author}</p>
-                   <p className="text-xs text-gray-500">{item.source}</p>
-                 </div>
-               </div>
-             ))}
+            {queue.filter(q => q.id !== activeContent.id).map((item) => (
+              <div
+                key={item.id}
+                onClick={() => play(item)}
+                className="min-w-[260px] xl:min-w-0 flex flex-col xl:flex-row gap-3 group cursor-pointer"
+              >
+                <div className="relative w-full xl:w-40 aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                  {item.thumbnail ? (
+                    <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{item.source}</div>
+                  )}
+                </div>
+                <div className="flex flex-col py-1 overflow-hidden">
+                  <p className="text-sm font-semibold text-gray-200 group-hover:text-violet-400 line-clamp-2 leading-snug">{item.title}</p>
+                  <p className="text-xs text-gray-500 mt-1 font-medium">{item.author}</p>
+                  <p className="text-xs text-gray-500">{item.source}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

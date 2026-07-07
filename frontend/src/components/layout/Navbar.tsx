@@ -11,6 +11,8 @@ export default function Navbar() {
   const { theme, setTheme } = useTheme();
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
   const { isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen } = useSidebar();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   return (
     <header className="sticky top-0 z-50 bg-white/30 dark:bg-gray-900/30 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
@@ -51,7 +53,7 @@ export default function Navbar() {
 
           <Link href="/" className="flex items-center space-x-2 ml-1">
             {//<Image src="/logo.svg" alt="Mytube" width={32} height={32} priority />}
-}
+            }
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
               Mytube
             </span>
@@ -70,7 +72,9 @@ export default function Navbar() {
             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
             aria-label="Toggle theme"
           >
-            {theme === "dark" ? (
+            {!mounted ? (
+              <span className="h-5 w-5" />
+            ) : theme === "dark" ? (
               <SunIcon className="h-5 w-5 text-yellow-400" />
             ) : (
               <MoonIcon className="h-5 w-5 text-gray-700" />

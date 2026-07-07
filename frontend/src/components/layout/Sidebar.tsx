@@ -80,7 +80,7 @@ export default function Sidebar() {
       {/* Header section with toggle button */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</span>
-        
+
         {/* Collapse Button (Desktop) */}
         <button
           onClick={() => setIsCollapsed(true)}
@@ -109,11 +109,10 @@ export default function Sidebar() {
               key={item.name}
               href={item.href}
               onClick={() => setIsMobileOpen(false)} // Auto-close drawer on link click
-              className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                isActive
+              className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
                   ? "bg-violet-600 text-white shadow-md shadow-violet-600/20 border-l-4 border-violet-400"
                   : "text-gray-400 hover:text-white hover:bg-violet-600/10 hover:border-l-4 hover:border-violet-500/50"
-              }`}
+                }`}
             >
               <item.icon className={`h-5 w-5 flex-shrink-0 ${isActive ? "text-white" : "text-gray-400 group-hover:text-white"}`} />
               <span className="truncate">{item.name}</span>
@@ -132,21 +131,27 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* 1. Desktop Sidebar Container */}
+      {/* 1. Desktop Sidebar — outer aside is a flex-layout width spacer */}
       <aside
         style={{
           width: isCollapsed ? "0px" : `${width}px`,
           transition: isResizing ? "none" : "width 250ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
-        className={`hidden md:block h-full relative overflow-hidden flex-shrink-0 ${
-          isCollapsed ? "border-r-0" : ""
-        }`}
+        className={`hidden md:block h-full relative overflow-hidden flex-shrink-0 ${isCollapsed ? "border-r-0" : ""
+          }`}
       >
-        <div 
-          className="h-full w-full"
-          style={{ width: `${width}px` }} // Prevents contents from shrinking while width animate-collapses
+        {/* Fixed inner container: pinned below navbar, spans to bottom of viewport */}
+        <div
+          className="fixed top-[57px] bottom-0 left-0 z-30 overflow-hidden"
+          style={{
+            width: isCollapsed ? "0px" : `${width}px`,
+            transition: isResizing ? "none" : "width 250ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
         >
-          <SidebarContent />
+          {/* Constant-width wrapper prevents content from squishing during collapse animation */}
+          <div className="h-full" style={{ width: `${width}px` }}>
+            <SidebarContent />
+          </div>
         </div>
       </aside>
 
@@ -160,9 +165,8 @@ export default function Sidebar() {
 
       {/* 3. Mobile Sidebar Overlay Drawer */}
       <aside
-        className={`md:hidden fixed top-0 bottom-0 left-0 z-50 w-64 h-full transform transition-transform duration-300 ease-in-out ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`md:hidden fixed top-0 bottom-0 left-0 z-50 w-64 h-full transform transition-transform duration-300 ease-in-out ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <SidebarContent />
       </aside>
