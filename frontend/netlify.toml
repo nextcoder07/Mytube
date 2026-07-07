@@ -1,0 +1,10 @@
+# ─── Netlify Configuration for Mytube Frontend ───
+# Docs: https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  command = "npm run build"
+  # Next.js Runtime (v5) on Netlify handles the publish folder automatically.
+
+[build.environment]
+  NODE_VERSION = "20"
+
