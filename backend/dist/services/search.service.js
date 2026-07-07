@@ -40,7 +40,8 @@ class SearchService {
             this.saveSearchHistory(userId, query, providers).catch((err) => console.error("Failed to save search history:", err.message));
             this.persistContent(ranked).catch((err) => console.error("Failed to persist content:", err.message));
         }
-        return ranked;
+        const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
+        return sliced;
     }
     /**
      * AI-enhanced search. Calls regular search, re-ranks using Gemini, and appends AI explanation.
@@ -143,37 +144,167 @@ Schema:
             await supabase_1.supabase.from("content").upsert(dbRecord, { onConflict: "url" });
         }
     }
+    static decodeHtmlEntities(str) {
+        return str
+            .replace(/&amp;/g, "&")
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&apos;/g, "'");
+    }
+    static normalizeText(text) {
+        let clean = this.decodeHtmlEntities(text).toLowerCase();
+        clean = clean.replace(/[’’ISO\u2019\u2018\u201b\u00b4`]/g, "'");
+        clean = clean.replace(/[“”]/g, '"');
+        clean = clean.replace(/[-_]/g, " ");
+        clean = clean.replace(/[^a-z0-9\s'"]/g, " ");
+        return clean.replace(/\s+/g, " ").trim();
+    }
+    static extractSeasonAndEpisode(text) {
+        let season = null;
+        let episode = null;
+        let current = this.decodeHtmlEntities(text).toLowerCase();
+        // Match patterns like s02e02, s2e2, s02ep02, s2ep2
+        const sxeMatch = current.match(/\bs(\d+)\s*(?:e|ep)\s*(\d+)\b/);
+        if (sxeMatch) {
+            season = parseInt(sxeMatch[1], 10);
+            episode = parseInt(sxeMatch[2], 10);
+            current = current.replace(sxeMatch[0], " ");
+        }
+        else {
+            // Match season patterns
+            const seasonMatch = current.match(/\b(?:season|s)\s*[-_]?\s*(\d+)\b/);
+            if (seasonMatch) {
+                season = parseInt(seasonMatch[1], 10);
+                current = current.replace(seasonMatch[0], " ");
+            }
+            // Match episode patterns
+            const epMatch = current.match(/\b(?:episode|ep|e)\s*[-_]?\s*(\d+)\b/);
+            if (epMatch) {
+                episode = parseInt(epMatch[1], 10);
+                current = current.replace(epMatch[0], " ");
+            }
+        }
+        return {
+            season,
+            episode,
+            cleanText: current.trim()
+        };
+    }
+    static matchToken(token, text) {
+        if (text.includes(token))
+            return true;
+        if (token.endsWith("s") && text.includes(token.slice(0, -1)))
+            return true;
+        if (!token.endsWith("s") && text.includes(token + "s"))
+            return true;
+        if (token.endsWith("'s") && text.includes(token.slice(0, -2)))
+            return true;
+        return false;
+    }
     /**
-     * Simple heuristic ranking by relevance, popularity, and source weight
+     * Smarter heuristic ranking using query decomposition, exact matches, season/episode matching,
+     * spam/reaction penalties, and raw relevance order.
      */
     static rankResults(items, query) {
-        const q = query.toLowerCase();
+        const querySE = this.extractSeasonAndEpisode(query);
+        const normalizedCleanQuery = this.normalizeText(querySE.cleanText);
+        // Extract tokens from the query: allow length >= 1 if it's a number, otherwise length >= 2
+        const queryTokens = normalizedCleanQuery
+            .split(/\s+/)
+            .filter(token => token.length >= 2 || /^\d+$/.test(token));
+        const tokensToMatch = queryTokens.length > 0 ? queryTokens : [normalizedCleanQuery];
         return items
-            .map((item) => {
+            .map((item, index) => {
             let score = 0;
-            // Keyword matches in title
-            if (item.title.toLowerCase().includes(q))
-                score += 50;
-            // Keyword matches in description
-            if (item.description?.toLowerCase().includes(q))
-                score += 20;
-            // Platform popularity factors
+            const titleLower = item.title.toLowerCase();
+            const normalizedTitle = this.normalizeText(item.title);
+            const normalizedDesc = this.normalizeText(item.description || "");
+            // 1. Strict validation: must match at least one token in title, description, or tags
+            const hasMatch = tokensToMatch.some(token => this.matchToken(token, normalizedTitle) ||
+                this.matchToken(token, normalizedDesc) ||
+                (item.tags && item.tags.some(tag => this.matchToken(token, tag.toLowerCase()))));
+            if (!hasMatch) {
+                return { item, score: -1 };
+            }
+            // 2. Season/Episode Matching
+            const titleSE = this.extractSeasonAndEpisode(item.title);
+            // Season check
+            if (querySE.season !== null) {
+                if (titleSE.season !== null) {
+                    if (querySE.season === titleSE.season) {
+                        score += 100;
+                    }
+                    else {
+                        // Heavy penalty for mismatching season
+                        score -= 200;
+                    }
+                }
+                else {
+                    // Title didn't specify season: moderate penalty
+                    score -= 30;
+                }
+            }
+            // Episode check
+            if (querySE.episode !== null) {
+                if (titleSE.episode !== null) {
+                    if (querySE.episode === titleSE.episode) {
+                        score += 150;
+                    }
+                    else {
+                        // Heavy penalty for mismatching episode
+                        score -= 200;
+                    }
+                }
+                else {
+                    // Title didn't specify episode: moderate penalty
+                    score -= 50;
+                }
+            }
+            // 3. Spam / Clickbait / Reaction Penalty
+            // Penalize if title has reaction/review terms but query doesn't
+            const spamKeywords = ["reaction", "review", "teaser", "trailer", "promo", "release date", "countdown", "roast", "parody", "meme", "shorts"];
+            const queryHasSpam = spamKeywords.some(word => query.toLowerCase().includes(word));
+            if (!queryHasSpam) {
+                const titleHasSpam = spamKeywords.some(word => titleLower.includes(word));
+                if (titleHasSpam) {
+                    score -= 120;
+                }
+            }
+            // 4. Exact Phrase Boost
+            if (normalizedTitle.includes(normalizedCleanQuery)) {
+                score += 100;
+            }
+            // 5. Keyword Token Coverage Boost
+            let titleTokenMatches = 0;
+            queryTokens.forEach(token => {
+                if (this.matchToken(token, normalizedTitle)) {
+                    titleTokenMatches++;
+                }
+            });
+            const coverageRatio = queryTokens.length > 0 ? titleTokenMatches / queryTokens.length : 0;
+            score += coverageRatio * 100;
+            if (coverageRatio === 1.0) {
+                score += 50; // Extra bonus for matching all query tokens
+            }
+            // 6. Original list index weight (preserves API rank as tie-breaker)
+            // YouTube/GitHub etc. return most relevant first, so keep that signal
+            const indexBoost = Math.max(0, 20 - index);
+            score += indexBoost;
+            // 7. Popularity bonus (small contribution to keep it query-first)
             if (item.source === "github" && item.viewCount) {
-                // GitHub Stars
-                score += Math.min(item.viewCount / 500, 30);
+                score += Math.min(item.viewCount / 1000, 15);
             }
             else if (item.source === "youtube" && item.viewCount) {
-                // YouTube Views
-                score += Math.min(item.viewCount / 10000, 30);
+                score += Math.min(item.viewCount / 200000, 15);
             }
             else if (item.source === "reddit" && item.viewCount) {
-                // Reddit Upvotes
-                score += Math.min(item.viewCount / 50, 30);
+                score += Math.min(item.viewCount / 100, 15);
             }
-            // Add small random score to avoid identical ranks
-            score += Math.random() * 2;
             return { item, score };
         })
+            .filter(x => x.score >= 0) // Filter out completely irrelevant/mismatched results
             .sort((a, b) => b.score - a.score)
             .map((x) => x.item);
     }
