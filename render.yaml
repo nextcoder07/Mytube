@@ -1,0 +1,57 @@
+# ─── Render Blueprint ───
+# Docs: https://render.com/docs/blueprint-spec
+# Connect this repo in Render → "New" → "Blueprint" and it will auto-detect this file.
+
+services:
+  - type: web
+    name: mytube-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    repo: https://github.com/nextcoder07/Mytube.git
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "4000"
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        # ⚠️ Set this in the Render UI to your Netlify URL
+        # e.g. https://mytube.netlify.app
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: "7d"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "openai/gpt-4o"
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
