@@ -94,10 +94,10 @@ export default function GlobalPlayer() {
   const videoId = isYouTube ? getYoutubeVideoId(activeContent.url) : null;
 
   return (
-    <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-hidden animate-in fade-in duration-200"}>
+    <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200"}>
 
       {/* Left/Main Section for Maximized OR PIP wrapper for Minimized */}
-      <div className={isMinimized ? "w-full flex flex-col" : "flex-1 flex flex-col overflow-y-auto"}>
+      <div className={isMinimized ? "w-full flex flex-col" : "flex-1 flex flex-col xl:overflow-y-auto"}>
 
         {/* PIP Header */}
         {isMinimized && (
@@ -225,7 +225,7 @@ export default function GlobalPlayer() {
 
       {/* Right Section: Suggestions / Queue */}
       {!isMinimized && (
-        <div className="w-full xl:w-[360px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col h-full overflow-hidden">
+        <div className="w-full xl:w-[360px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden">
           <div className="p-4 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">
