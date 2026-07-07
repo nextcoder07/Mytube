@@ -1,14 +1,13 @@
 // src/jobs/index.ts — BullMQ queue definitions
-import { Queue, Worker, QueueEvents } from 'bullmq';
-import redis from '../config/redis';
+// TEMPORARILY DISABLED to remove Redis dependency
+const dummyQueue = { add: async () => {} } as any;
 
-const connection = redis as any;
+export const summaryQueue        = dummyQueue;
+export const embeddingsQueue     = dummyQueue;
+export const recommendationsQueue = dummyQueue;
+export const emailsQueue         = dummyQueue;
+export const analyticsQueue      = dummyQueue;
+export const notificationsQueue  = dummyQueue;
 
-export const summaryQueue        = new Queue('summary',        { connection });
-export const embeddingsQueue     = new Queue('embeddings',     { connection });
-export const recommendationsQueue = new Queue('recommendations', { connection });
-export const emailsQueue         = new Queue('emails',         { connection });
-export const analyticsQueue      = new Queue('analytics',      { connection });
-export const notificationsQueue  = new Queue('notifications',  { connection });
-
-export { Worker, QueueEvents };
+export const Worker = class {} as any;
+export const QueueEvents = class {} as any;
