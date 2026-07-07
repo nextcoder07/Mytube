@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 export default function AuthButton() {
   const { user, token, signIn, signOut, isLoading } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
 
   const router = useRouter();
   const handleOpenAuth = () => router.push('/auth/login');
@@ -17,6 +19,15 @@ export default function AuthButton() {
 
   if (isLoading || loading) {
     return <button className="btn-neon px-3 py-1">Signing in...</button>;
+  }
+
+  // During SSR and initial hydration, keep the server-safe markup (Sign in button)
+  if (!mounted) {
+    return (
+      <button onClick={handleOpenAuth} className="btn-neon px-3 py-1">
+        Sign in
+      </button>
+    );
   }
 
   if (!token) {

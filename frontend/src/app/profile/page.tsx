@@ -6,11 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import auth from '@/lib/firebase';
 import { sendEmailVerification, reload } from 'firebase/auth';
 
-export const metadata = {
-  title: "Profile — Mytube",
-  description: "Your public learning profile.",
-};
-
 export default function ProfilePage() {
   const { user, token, isLoading, fetchCurrentUser } = useAuth();
   const [loading, setLoading] = useState(false);
