@@ -19,12 +19,39 @@ export class YouTubeProvider implements ContentProvider {
       let totalToFetch = options?.limit || 25;
       let fetched = 0;
 
+      // Smart Query Appending: enhance query when AI context is provided
+      let effectiveQuery = query;
+      if (options?.aiContext) {
+        effectiveQuery = `${query} tutorial full course`;
+      }
+
+      // Resolve filter params with defaults
+      const order = options?.order || 'relevance';
+      const relevanceLanguage = options?.relevanceLanguage || 'en';
+
       // Fetch multiple pages if needed
       while (fetched < totalToFetch) {
         const batchSize = Math.min(perPage, totalToFetch - fetched);
-        let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
-          query
-        )}&type=video&order=relevance&maxResults=${batchSize}&key=${apiKey}`;
+
+        // Build optimized search URL with all YouTube Data API filters
+        let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet`
+          + `&q=${encodeURIComponent(effectiveQuery)}`
+          + `&type=video`
+          + `&videoEmbeddable=true`
+          + `&order=${order}`
+          + `&relevanceLanguage=${relevanceLanguage}`
+          + `&maxResults=${batchSize}`
+          + `&key=${apiKey}`;
+
+        // Optional: Video duration filter (short/medium/long)
+        if (options?.videoDuration && options.videoDuration !== 'any') {
+          searchUrl += `&videoDuration=${options.videoDuration}`;
+        }
+
+        // Optional: Video category filter
+        if (options?.videoCategoryId) {
+          searchUrl += `&videoCategoryId=${options.videoCategoryId}`;
+        }
 
         if (pageToken) {
           searchUrl += `&pageToken=${pageToken}`;

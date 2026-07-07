@@ -26,4 +26,11 @@ export interface SearchOptions {
   page?: number;
   limit?: number;
   pageToken?: string;
+  // YouTube-optimized API filters
+  order?: 'relevance' | 'date' | 'viewCount' | 'rating';
+  videoDuration?: 'any' | 'short' | 'medium' | 'long';
+  videoCategoryId?: string;
+  relevanceLanguage?: string;
+  // AI Search personalization
+  aiContext?: string;
 }

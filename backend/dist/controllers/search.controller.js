@@ -20,7 +20,19 @@ const search = async (req, res, next) => {
             ? req.query.providers.split(",")
             : undefined;
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
-        const results = await search_service_1.default.search(user.uid, query, { providers, limit });
+        // YouTube-optimized filter params
+        const order = req.query.order;
+        const videoDuration = req.query.videoDuration;
+        const videoCategoryId = req.query.videoCategoryId;
+        const relevanceLanguage = req.query.relevanceLanguage;
+        const results = await search_service_1.default.search(user.uid, query, {
+            providers,
+            limit,
+            order,
+            videoDuration,
+            videoCategoryId,
+            relevanceLanguage,
+        });
         res.status(200).json((0, response_1.success)(results, "Search completed"));
     }
     catch (err) {
@@ -33,16 +45,26 @@ const searchAI = async (req, res, next) => {
         const user = req.user;
         if (!user)
             return next(new errors_1.HttpError(401, "Unauthorized"));
-        const { query, providers } = req.body;
+        const { query, providers, aiContext } = req.body;
         if (!query) {
             return next(new errors_1.HttpError(400, "Query body parameter is required"));
         }
+        // YouTube-optimized filter params (from query string or body)
+        const order = (req.body.order || req.query.order);
+        const videoDuration = (req.body.videoDuration || req.query.videoDuration);
+        const videoCategoryId = (req.body.videoCategoryId || req.query.videoCategoryId);
+        const relevanceLanguage = (req.body.relevanceLanguage || req.query.relevanceLanguage);
         const options = {
             limit: req.query.limit ? parseInt(req.query.limit, 10) : undefined,
             pageToken: req.query.pageToken,
             after: req.query.after,
+            order,
+            videoDuration,
+            videoCategoryId,
+            relevanceLanguage,
+            aiContext: aiContext || undefined,
         };
-        const results = await search_service_1.default.search(user.uid, query, { ...options, providers });
+        const results = await search_service_1.default.searchAI(user.uid, query, { ...options, providers });
         res.status(200).json((0, response_1.success)(results, "AI Search completed"));
     }
     catch (err) {

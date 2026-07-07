@@ -79,8 +79,15 @@ export class SearchService {
 
     // Send top 10 results to AI for re-ranking and personalization explanation
     const topResults = results.slice(0, 10);
+
+    // Build personalization context if the user provided additional instructions
+    const personalizationBlock = options?.aiContext
+      ? `\nThe user provided the following personalization context for their search:\n"${options.aiContext}"\nUse this context to better rank results and tailor your explanations to their specific needs, level, and preferences.\n`
+      : '';
+
     const prompt = `
 You are an expert tutor. Re-rank these content learning resources for the query: "${query}".
+${personalizationBlock}
 For each resource, explain in 1 sentence WHY it is highly relevant for a learner, and give a score from 1-10.
 
 Resources:
