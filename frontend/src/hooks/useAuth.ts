@@ -2,7 +2,14 @@
 import { useAuthStore } from '../store/auth.store';
 
 export function useAuth() {
-  const { user, token, loading: isLoading, login: signIn, logout: signOut } = useAuthStore();
-  return { user, token, isLoading, signIn, signOut, isAuthenticated: !!token };
+  const {
+    user,
+    token,
+    loading: isLoading,
+    login: signIn,
+    logout: signOut,
+    fetchCurrentUser,
+  } = useAuthStore();
+  return { user, token, isLoading, signIn, signOut, fetchCurrentUser, isAuthenticated: !!token };
 }
 

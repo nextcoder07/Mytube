@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import auth from '@/lib/firebase';
+import auth, { isFirebaseConfigured } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,11 @@ export default function LoginPage() {
   const handleEmailLogin = async () => {
     setLoading(true);
     try {
+      if (!isFirebaseConfigured()) {
+        alert('Firebase client config not set. Please add your Firebase web config as NEXT_PUBLIC_FIREBASE_* env variables.');
+        setLoading(false);
+        return;
+      }
       if (!email || !password) {
         alert('Please provide email and password');
         setLoading(false);
@@ -26,7 +31,8 @@ export default function LoginPage() {
       router.push('/profile');
     } catch (err: any) {
       console.error('Login error', err);
-      alert(err?.message || 'Login failed');
+      const code = err?.code || err?.name || 'unknown';
+      alert(`Login failed (${code}): ${err?.message || ''}`);
     } finally {
       setLoading(false);
     }
@@ -59,7 +65,10 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <div className="text-sm text-gray-400">Don't have an account? <a href="/auth/register" className="text-indigo-400 hover:underline">Create one</a>.</div>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-400">Don't have an account? <a href="/auth/register" className="text-indigo-400 hover:underline">Create one</a>.</div>
+        <div><a href="/auth/forgot" className="text-sm text-yellow-400 hover:underline">Forgot password?</a></div>
+      </div>
     </main>
   );
 }

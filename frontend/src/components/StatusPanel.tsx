@@ -2,8 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/lib/config';
 
+type StatusShape = Record<string, unknown>;
+
 export default function StatusPanel() {
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<StatusShape | { error: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,9 +14,10 @@ export default function StatusPanel() {
       try {
         const res = await fetch(`${API_BASE_URL}/status`);
         const body = await res.json();
-        if (mounted) setStatus(body);
+        if (mounted) setStatus(body as StatusShape);
       } catch (err) {
-        if (mounted) setStatus({ error: (err as any).message || String(err) });
+        const msg = err instanceof Error ? err.message : String(err);
+        if (mounted) setStatus({ error: msg });
       } finally {
         if (mounted) setLoading(false);
       }

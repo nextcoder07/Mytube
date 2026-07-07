@@ -1,12 +1,10 @@
-'use client';
+"use client";
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export default function AuthButton() {
-  const { user, token, signIn, signOut, isLoading } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { user, token, signOut, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
@@ -17,7 +15,7 @@ export default function AuthButton() {
     signOut();
   };
 
-  if (isLoading || loading) {
+  if (isLoading) {
     return <button className="btn-neon px-3 py-1">Signing in...</button>;
   }
 

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import auth from '@/lib/firebase';
+import auth, { isFirebaseConfigured } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,11 @@ export default function RegisterPage() {
   const handleEmailRegister = async () => {
     setLoading(true);
     try {
+      if (!isFirebaseConfigured()) {
+        alert('Firebase client config not set. Please add your Firebase web config as NEXT_PUBLIC_FIREBASE_* env variables.');
+        setLoading(false);
+        return;
+      }
       if (!email || !password || !name) {
         alert('Please provide name, email and password');
         setLoading(false);
@@ -29,7 +34,8 @@ export default function RegisterPage() {
       router.push('/profile');
     } catch (err: any) {
       console.error('Register error', err);
-      alert(err?.message || 'Registration failed');
+      const code = err?.code || err?.name || 'unknown';
+      alert(`Registration failed (${code}): ${err?.message || ''}`);
     } finally {
       setLoading(false);
     }
@@ -69,6 +75,7 @@ export default function RegisterPage() {
       </div>
 
       <div className="text-sm text-gray-400">Already have an account? <a href="/auth/login" className="text-indigo-400 hover:underline">Sign in</a>.</div>
+      <div className="text-sm text-gray-400 mt-2">Forgot your password? <a href="/auth/forgot" className="text-yellow-400 hover:underline">Reset it</a>.</div>
     </main>
   );
 }
