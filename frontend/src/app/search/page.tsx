@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import SearchBar from '../../components/search/SearchBar';
 import SearchResults from '../../components/search/SearchResults';
 import SearchFilters from '../../components/search/SearchFilters';
+import type { SearchFiltersState } from '../../types/content';
 import { useSearch } from '../../hooks/useSearch';
 
 export default function SearchPage() {
@@ -25,7 +26,7 @@ export default function SearchPage() {
   const [aiContext, setAiContext] = useState('');
   const ALL_PROVIDERS = ["youtube", "github", "reddit", "medium", "website"];
   const [selectedProviders, setSelectedProviders] = useState<string[]>(ALL_PROVIDERS);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<SearchFiltersState>({
     order: 'relevance',
     videoDuration: 'any',
     videoCategoryId: '',
@@ -66,7 +67,7 @@ export default function SearchPage() {
     });
   };
 
-  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+  const handleFilterChange = (key: keyof SearchFiltersState, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
