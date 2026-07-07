@@ -15,14 +15,24 @@ class YouTubeProvider {
             let pageToken = options?.pageToken;
             let totalToFetch = options?.limit || 25;
             let fetched = 0;
-            // Smart Query Appending: enhance query when AI context is provided
+            // Smart Query Appending: rewrite the query to favor educational, high-signal videos
             let effectiveQuery = query;
+            const normalizedQuery = query.toLowerCase().trim();
+            const needsTutorial = !/(tutorial|course|lesson|guide|explain|beginner|intro|deep dive|documentation)/i.test(normalizedQuery);
+            const wantsLongForm = /(react|next|node|docker|python|typescript|machine learning|ai|system design|database|backend|frontend|javascript|java|go|kubernetes|linux)/i.test(normalizedQuery);
             if (options?.aiContext) {
-                effectiveQuery = `${query} tutorial full course`;
+                effectiveQuery = `${query} tutorial full course comprehensive`;
+            }
+            else if (needsTutorial) {
+                effectiveQuery = `${query} tutorial`;
+            }
+            if (wantsLongForm) {
+                effectiveQuery = `${effectiveQuery} full course`.trim();
             }
             // Resolve filter params with defaults
             const order = options?.order || 'relevance';
             const relevanceLanguage = options?.relevanceLanguage || 'en';
+            const safeOrder = order === 'relevance' ? 'relevance' : order;
             // Fetch multiple pages if needed
             while (fetched < totalToFetch) {
                 const batchSize = Math.min(perPage, totalToFetch - fetched);
@@ -31,7 +41,7 @@ class YouTubeProvider {
                     + `&q=${encodeURIComponent(effectiveQuery)}`
                     + `&type=video`
                     + `&videoEmbeddable=true`
-                    + `&order=${order}`
+                    + `&order=${safeOrder}`
                     + `&relevanceLanguage=${relevanceLanguage}`
                     + `&maxResults=${batchSize}`
                     + `&key=${apiKey}`;
