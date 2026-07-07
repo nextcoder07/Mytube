@@ -7,7 +7,7 @@ import { HttpError } from "../utils/errors";
 export const search = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as any).user;
-    if (!user) return next(new HttpError(401, "Unauthorized"));
+    const userId = user?.uid || "anonymous";
 
     const query = req.query.q as string;
     if (!query) {
@@ -43,7 +43,7 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
 export const searchAI = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as any).user;
-    if (!user) return next(new HttpError(401, "Unauthorized"));
+    const userId = user?.uid || "anonymous";
 
     const { query, providers, aiContext } = req.body;
     if (!query) {
@@ -66,7 +66,7 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
       relevanceLanguage,
       aiContext: aiContext || undefined,
     };
-    const results = await SearchService.searchAI(user.uid, query, { ...options, providers });
+    const results = await SearchService.searchAI(userId, query, { ...options, providers });
     res.status(200).json(success(results, "AI Search completed"));
   } catch (err: any) {
     next(err);

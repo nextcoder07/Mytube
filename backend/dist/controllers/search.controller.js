@@ -10,8 +10,7 @@ const errors_1 = require("../utils/errors");
 const search = async (req, res, next) => {
     try {
         const user = req.user;
-        if (!user)
-            return next(new errors_1.HttpError(401, "Unauthorized"));
+        const userId = user?.uid || "anonymous";
         const query = req.query.q;
         if (!query) {
             return next(new errors_1.HttpError(400, "Query parameter 'q' is required"));
@@ -43,8 +42,7 @@ exports.search = search;
 const searchAI = async (req, res, next) => {
     try {
         const user = req.user;
-        if (!user)
-            return next(new errors_1.HttpError(401, "Unauthorized"));
+        const userId = user?.uid || "anonymous";
         const { query, providers, aiContext } = req.body;
         if (!query) {
             return next(new errors_1.HttpError(400, "Query body parameter is required"));
@@ -64,7 +62,7 @@ const searchAI = async (req, res, next) => {
             relevanceLanguage,
             aiContext: aiContext || undefined,
         };
-        const results = await search_service_1.default.searchAI(user.uid, query, { ...options, providers });
+        const results = await search_service_1.default.searchAI(userId, query, { ...options, providers });
         res.status(200).json((0, response_1.success)(results, "AI Search completed"));
     }
     catch (err) {
