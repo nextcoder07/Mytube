@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { User } from "../types/user";
 import axios from "axios";
+import { API_BASE_URL } from "../lib/config";
 
 interface AuthState {
   user: User | null;
@@ -16,8 +17,6 @@ interface AuthState {
   setInitialized: (initialized: boolean) => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
@@ -30,7 +29,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (idToken: string) => {
     set({ loading: true });
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, { idToken });
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, { idToken });
       const { user, token } = res.data.data;
       set({ user, token, loading: false });
       return user;
@@ -43,7 +42,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (idToken: string) => {
     set({ loading: true });
     try {
-      const res = await axios.post(`${API_URL}/auth/register`, { idToken });
+      const res = await axios.post(`${API_BASE_URL}/auth/register`, { idToken });
       const { user } = res.data.data;
       set({ user, token: idToken, loading: false });
       return user;
@@ -63,7 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ loading: true });
     try {
-      const res = await axios.get(`${API_URL}/auth/me`, {
+      const res = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const user = res.data.data;

@@ -14,13 +14,21 @@ const app = express();
 // In production FRONTEND_URL should be set to the Netlify domain
 // e.g. https://mytube.netlify.app
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:3000",
-  "http://localhost:3000", // always allow local dev
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://*.vercel.app",
 ].filter(Boolean);
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.some((allowed) => allowed === origin || allowed === "https://*.vercel.app")) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );
