@@ -56,13 +56,17 @@ export default function GlobalPlayer() {
         savedPlaylist = createResponse.data.data;
       }
 
+      if (!savedPlaylist?.id) {
+        throw new Error("Failed to resolve or create playlist");
+      }
+
       await api.post(`/playlist/${savedPlaylist.id}/items`, {
         contentId: activeContent.id,
       });
       setSaveStatus(`Saved to "${savedPlaylist.title}"`);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Save playlist error:", err);
-      const message = err?.response?.data?.message || err?.message || "Failed to save to playlist.";
+      const message = err instanceof Error ? err.message : "Failed to save to playlist.";
       setSaveStatus(message);
     }
 
@@ -195,6 +199,7 @@ export default function GlobalPlayer() {
                     Note
                   </button>
                   <button
+                    onClick={handleSaveToPlaylist}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg text-sm font-semibold transition-colors border border-gray-700"
                   >
                     <BookmarkIcon className="w-4 h-4" />
@@ -202,6 +207,12 @@ export default function GlobalPlayer() {
                   </button>
                 </div>
               </div>
+
+              {saveStatus && (
+                <div className="mt-3 text-sm text-gray-300">
+                  {saveStatus}
+                </div>
+              )}
 
               <div className="mt-6 p-4 bg-gray-800/50 rounded-xl border border-gray-800 text-sm text-gray-300 leading-relaxed">
                 {activeContent.description}
