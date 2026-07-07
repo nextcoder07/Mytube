@@ -3,6 +3,8 @@
 // src/components/player/GlobalPlayer.tsx
 import React, { useState } from "react";
 import { usePlayerStore } from "../../store/player.store";
+import { useAuth } from "../../hooks/useAuth";
+import api from "../../lib/api";
 import {
   XMarkIcon,
   MinusSmallIcon,
@@ -27,8 +29,45 @@ export default function GlobalPlayer() {
     previous,
     play
   } = usePlayerStore();
-
+  const { isAuthenticated } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  const handleSaveToPlaylist = async () => {
+    if (!activeContent) return;
+
+    if (!isAuthenticated) {
+      setSaveStatus("Please sign in to save content to a playlist.");
+      return;
+    }
+
+    setSaveStatus("Saving to playlist...");
+    try {
+      const playlistResponse = await api.get("/playlist");
+      const playlists = playlistResponse.data.data as Array<{ id: string; title: string }>;
+      let savedPlaylist = playlists.find((playlist) => playlist.title === "Saved Videos");
+
+      if (!savedPlaylist) {
+        const createResponse = await api.post("/playlist", {
+          title: "Saved Videos",
+          description: "Saved from MyTube",
+          isPublic: false,
+        });
+        savedPlaylist = createResponse.data.data;
+      }
+
+      await api.post(`/playlist/${savedPlaylist.id}/items`, {
+        contentId: activeContent.id,
+      });
+      setSaveStatus(`Saved to "${savedPlaylist.title}"`);
+    } catch (err: any) {
+      console.error("Save playlist error:", err);
+      const message = err?.response?.data?.message || err?.message || "Failed to save to playlist.";
+      setSaveStatus(message);
+    }
+
+    window.setTimeout(() => setSaveStatus(null), 3000);
+  };
 
   if (!activeContent) return null;
 
