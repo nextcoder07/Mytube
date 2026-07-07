@@ -3,8 +3,11 @@
 
 [build]
   command = "npm run build"
-  # Next.js Runtime (v5) on Netlify handles the publish folder automatically.
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
