@@ -1,4 +1,5 @@
 // src/components/content/ContentCard.tsx
+/* eslint-disable @next/next/no-img-element */
 import React from "react";
 import { Content } from "../../types/content";
 import {

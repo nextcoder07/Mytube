@@ -6,7 +6,7 @@ export default function Home() {
   const [backendStatus, setBackendStatus] = useState<string>("Checking backend connection...");
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`)
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "ok") {
@@ -15,7 +15,7 @@ export default function Home() {
           setBackendStatus("⚠️ Backend connected, but returned unexpected status.");
         }
       })
-      .catch((err) => {
+      .catch(() => {
         setBackendStatus("❌ Failed to connect to the backend.");
       });
   }, []);

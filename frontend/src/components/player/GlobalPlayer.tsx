@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 // src/components/player/GlobalPlayer.tsx
 import React, { useState } from "react";
 import { usePlayerStore } from "../../store/player.store";
