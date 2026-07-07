@@ -6,6 +6,7 @@ import Image from "next/image";
 import { MoonIcon, SunIcon, Bars3Icon } from "@heroicons/react/24/outline";
 import { useTheme } from "next-themes";
 import { useSidebar } from "@/context/SidebarContext";
+import AuthButton from '@/components/auth/AuthButton';
 
 export default function Navbar() {
   const { theme, setTheme } = useTheme();
@@ -55,18 +56,27 @@ export default function Navbar() {
               Mytube
             </span>
           </Link>
+          <Link href="/auth" className="ml-4 hidden md:inline-block text-sm font-medium text-gray-700 dark:text-gray-300 hover:underline">
+            Sign in / Register
+          </Link>
+          <nav className="hidden md:flex items-center space-x-3 ml-4">
+            <Link href="/auth" className="text-sm text-gray-600 dark:text-gray-300 hover:underline">Sign in</Link>
+          </nav>
         </div>
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-          aria-label="Toggle theme"
-        >
-          {theme === "dark" ? (
-            <SunIcon className="h-5 w-5 text-yellow-400" />
-          ) : (
-            <MoonIcon className="h-5 w-5 text-gray-700" />
-          )}
-        </button>
+        <div className="flex items-center gap-3">
+          <AuthButton />
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? (
+              <SunIcon className="h-5 w-5 text-yellow-400" />
+            ) : (
+              <MoonIcon className="h-5 w-5 text-gray-700" />
+            )}
+          </button>
+        </div>
       </nav>
     </header>
   );

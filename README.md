@@ -110,6 +110,20 @@ npm run dev                    # starts on http://localhost:3000
 2. Copy the **URL** and **service_role key** from **Settings → API**.
 3. Paste them into Render's environment variables.
 
+## Start Database & Authentication (quick)
+
+- To load the database schema, open Supabase → SQL Editor and run the SQL in `backend/src/database/schema.sql` (or copy-paste the contents).
+- Alternatively, run the SQL locally using `psql` against your `DATABASE_URL` if you prefer CLI:
+
+```bash
+# Example (replace with your DATABASE_URL)
+psql "$DATABASE_URL" -f backend/src/database/schema.sql
+```
+
+- For authentication, create a Firebase web app and a service account JSON. Add the `NEXT_PUBLIC_FIREBASE_*` keys to your frontend (Vercel/Netlify) and `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to the backend (Render/Env).
+
+- After schema and env vars are in place, deploy backend (Render) and frontend (Vercel). The backend will create user/profile records on first login.
+
 ### Auth → Firebase
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).

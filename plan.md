@@ -1259,6 +1259,39 @@ cd backend && npm run worker
 | **Database** | Supabase | Already cloud-hosted |
 | **Storage** | Supabase | Already cloud-hosted |
 
+### Quick Deploy Checklist (Render backend + Vercel frontend)
+
+- Backend (Render) — required env vars:
+  - `PORT` = 4000
+  - `NODE_ENV` = production
+  - `FRONTEND_URL` = your frontend URL (e.g. https://mytube-yourteam.vercel.app)
+  - `SUPABASE_URL` = Supabase → Settings → API
+  - `SUPABASE_SERVICE_ROLE_KEY` = Supabase service_role key (secret)
+  - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` = Firebase Admin SDK values
+  - `JWT_SECRET` (generate a secure value)
+  - Optional: `REDIS_URL`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `YOUTUBE_API_KEY`
+
+- Frontend (Vercel) — required env vars (set in Vercel project settings):
+  - `NEXT_PUBLIC_FIREBASE_API_KEY`
+  - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+  - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+  - `NEXT_PUBLIC_FIREBASE_APP_ID`
+
+Deployment steps:
+
+1. Push `main` to GitHub.
+2. Connect the repo to Render and import `render.yaml` (creates backend service).
+3. Add the backend secrets in Render service settings.
+4. Connect frontend to Vercel and add the `NEXT_PUBLIC_*` Firebase keys.
+5. Deploy; Render will build backend Docker (uses `postinstall` to run `npm run build`).
+6. Test sign-in (Google) on frontend and verify `/api/auth/me` returns user profile.
+
+Notes:
+
+- Backend uses Firebase Admin to verify ID tokens; if missing, it falls back to a mock user in development to avoid blocking local testing.
+- Supabase client in the backend uses `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- Never commit secrets. Use Vercel/Render UI or CLI to set env variables.
+
 ---
 
 ## 20. Implementation Phases

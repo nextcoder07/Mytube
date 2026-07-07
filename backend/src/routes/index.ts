@@ -10,6 +10,7 @@ import notesRouter from "./notes.routes";
 import summaryRouter from "./summary.routes";
 import aiRouter from "./ai.routes";
 import analyticsRouter from "./analytics.routes";
+import statusRouter from './status.routes';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/notes", notesRouter);
 router.use("/summary", summaryRouter);
 router.use("/ai", aiRouter);
 router.use("/analytics", analyticsRouter);
+router.use('/status', statusRouter);
 
 export default router;

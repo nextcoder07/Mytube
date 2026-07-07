@@ -18,12 +18,18 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  token: null,
+  user: typeof window !== 'undefined' && localStorage.getItem('mt_user') ? JSON.parse(localStorage.getItem('mt_user') || 'null') : null,
+  token: typeof window !== 'undefined' ? (localStorage.getItem('mt_token') || null) : null,
   loading: false,
   initialized: false,
 
-  setToken: (token) => set({ token }),
+  setToken: (token) => {
+    if (typeof window !== 'undefined') {
+      if (token) localStorage.setItem('mt_token', token);
+      else localStorage.removeItem('mt_token');
+    }
+    set({ token });
+  },
   setInitialized: (initialized) => set({ initialized }),
 
   login: async (idToken: string) => {
@@ -31,6 +37,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await axios.post(`${API_BASE_URL}/auth/login`, { idToken });
       const { user, token } = res.data.data;
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('mt_user', JSON.stringify(user)); } catch {}
+        localStorage.setItem('mt_token', token);
+      }
       set({ user, token, loading: false });
       return user;
     } catch (err) {
@@ -44,6 +54,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await axios.post(`${API_BASE_URL}/auth/register`, { idToken });
       const { user } = res.data.data;
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('mt_user', JSON.stringify(user)); } catch {}
+        localStorage.setItem('mt_token', idToken);
+      }
       set({ user, token: idToken, loading: false });
       return user;
     } catch (err) {
@@ -53,6 +67,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mt_user');
+      localStorage.removeItem('mt_token');
+    }
     set({ user: null, token: null });
   },
 
