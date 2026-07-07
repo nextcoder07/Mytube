@@ -65,3 +65,38 @@ export interface Summary {
   keyPoints: string[];
   cached?: boolean;
 }
+
+/** Advanced search filter state for YouTube API optimization */
+export interface SearchFiltersState {
+  order: 'relevance' | 'date' | 'viewCount' | 'rating';
+  videoDuration: 'any' | 'short' | 'medium' | 'long';
+  videoCategoryId: string;
+  relevanceLanguage: string;
+}
+
+/** YouTube video category constants */
+export const VIDEO_CATEGORIES = [
+  { id: '', label: 'All Categories' },
+  { id: '27', label: 'Education' },
+  { id: '28', label: 'Science & Technology' },
+  { id: '26', label: 'How-to & Style' },
+  { id: '24', label: 'Entertainment' },
+  { id: '25', label: 'News & Politics' },
+  { id: '22', label: 'People & Blogs' },
+  { id: '10', label: 'Music' },
+  { id: '20', label: 'Gaming' },
+] as const;
+
+export const LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'zh', label: 'Chinese' },
+  { code: 'ar', label: 'Arabic' },
+] as const;
+

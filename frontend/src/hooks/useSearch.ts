@@ -13,6 +13,14 @@ interface SearchParams {
   type?: string;
   page?: number;
   limit?: number;
+  // YouTube-optimized filters
+  order?: string;
+  videoDuration?: string;
+  videoCategoryId?: string;
+  relevanceLanguage?: string;
+  // AI search mode
+  aiMode?: boolean;
+  aiContext?: string;
 }
 
 export function useSearch() {
@@ -26,7 +34,41 @@ export function useSearch() {
     queryKey: ['search', params],
     queryFn: async () => {
       if (!params?.q) return { data: [] };
-      const res = await api.get('/search', { params });
+
+      // When AI mode is active, use POST /search/ai with body params
+      if (params.aiMode) {
+        const res = await api.post('/search/ai', {
+          query: params.q,
+          providers: params.providers ? params.providers.split(',') : undefined,
+          aiContext: params.aiContext || undefined,
+          order: params.order,
+          videoDuration: params.videoDuration,
+          videoCategoryId: params.videoCategoryId,
+          relevanceLanguage: params.relevanceLanguage,
+        }, {
+          params: { limit: params.limit },
+        });
+        return res.data;
+      }
+
+      // Standard search with filter query params
+      const queryParams: Record<string, string | number | undefined> = {
+        q: params.q,
+        providers: params.providers,
+        limit: params.limit,
+        order: params.order,
+        videoDuration: params.videoDuration,
+        videoCategoryId: params.videoCategoryId || undefined,
+        relevanceLanguage: params.relevanceLanguage,
+      };
+      // Remove undefined values
+      Object.keys(queryParams).forEach((key) => {
+        if (queryParams[key] === undefined || queryParams[key] === '') {
+          delete queryParams[key];
+        }
+      });
+
+      const res = await api.get('/search', { params: queryParams });
       return res.data;
     },
     enabled: !!params?.q,
