@@ -32,10 +32,11 @@ export default function RegisterPage() {
       const idToken = await res.user.getIdToken();
       await register(idToken);
       router.push('/profile');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Register error', err);
-      const code = err?.code || err?.name || 'unknown';
-      alert(`Registration failed (${code}): ${err?.message || ''}`);
+      const code = err instanceof Error ? err.name || 'unknown' : 'unknown';
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Registration failed (${code}): ${message}`);
     } finally {
       setLoading(false);
     }

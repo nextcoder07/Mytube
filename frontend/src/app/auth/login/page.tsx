@@ -29,10 +29,11 @@ export default function LoginPage() {
       const idToken = await res.user.getIdToken();
       await login(idToken);
       router.push('/profile');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error', err);
-      const code = err?.code || err?.name || 'unknown';
-      alert(`Login failed (${code}): ${err?.message || ''}`);
+      const code = err instanceof Error ? err.name || 'unknown' : 'unknown';
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Login failed (${code}): ${message}`);
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ export default function LoginPage() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-400">Don't have an account? <a href="/auth/register" className="text-indigo-400 hover:underline">Create one</a>.</div>
+        <div className="text-sm text-gray-400">Don&apos;t have an account? <a href="/auth/register" className="text-indigo-400 hover:underline">Create one</a>.</div>
         <div><a href="/auth/forgot" className="text-sm text-yellow-400 hover:underline">Forgot password?</a></div>
       </div>
     </main>

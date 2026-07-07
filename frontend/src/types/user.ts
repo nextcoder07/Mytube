@@ -4,12 +4,20 @@ export interface User {
   id: string;
   email: string;
   displayName?: string;
+  display_name?: string;
+  name?: string;
   photoUrl?: string;
+  photoURL?: string;
+  photo_url?: string;
+  picture?: string;
   role: "user" | "admin";
   subscription: "free" | "premium";
   createdAt: string;
+  created_at?: string;
   updatedAt: string;
   profile?: Profile;
+  location?: string;
+  website?: string;
 }
 
 export interface Profile {

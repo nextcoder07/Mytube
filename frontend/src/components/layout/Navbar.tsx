@@ -2,7 +2,6 @@
 // src/components/layout/Navbar.tsx
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { MoonIcon, SunIcon, Bars3Icon } from "@heroicons/react/24/outline";
 import { useTheme } from "next-themes";
 import { useSidebar } from "@/context/SidebarContext";
@@ -51,7 +50,8 @@ export default function Navbar() {
           )}
 
           <Link href="/" className="flex items-center space-x-2 ml-1">
-            <Image src="/logo.svg" alt="Mytube" width={32} height={32} priority />
+            {//<Image src="/logo.svg" alt="Mytube" width={32} height={32} priority />}
+}
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
               Mytube
             </span>

@@ -7,7 +7,7 @@ import auth from '@/lib/firebase';
 import { sendEmailVerification, reload } from 'firebase/auth';
 
 export default function ProfilePage() {
-  const { user, token, isLoading, fetchCurrentUser } = useAuth();
+  const { user, token, fetchCurrentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [sending, setSending] = useState(false);
@@ -28,7 +28,7 @@ export default function ProfilePage() {
           } else {
             if (mounted) setEmailVerified(null);
           }
-        } catch (e) {
+        } catch {
           if (mounted) setEmailVerified(null);
         }
       } catch (err) {
@@ -76,30 +76,38 @@ export default function ProfilePage() {
     );
   }
 
+  if (loading) {
+    return (
+      <main className="p-6 max-w-3xl mx-auto">
+        <div className="text-center text-gray-400">Loading profile...</div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex-1 p-6 space-y-8 max-w-3xl mx-auto">
       {/* Profile card */}
       <div className="glow-card p-6 flex flex-col sm:flex-row items-center gap-6">
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-          {user?.photoUrl || user?.photo_url || user?.picture ? (
+          {user?.photoUrl || user?.photo_url || user?.photoURL || user?.picture ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.photoUrl || user.photo_url || user.picture} alt={user.displayName || user.name || user.email} className="w-20 h-20 object-cover rounded-full" />
+            <img src={user.photoUrl || user.photo_url || user.photoURL || user.picture} alt={user?.displayName || user?.display_name || user?.name || user?.email || 'User'} className="w-20 h-20 object-cover rounded-full" />
           ) : (
             <UserCircleIcon className="w-12 h-12 text-white" />
           )}
         </div>
         <div className="text-center sm:text-left">
           <h1 className="text-xl font-bold text-white">{user?.displayName || user?.display_name || user?.name || user?.email || 'Your Name'}</h1>
-          <p className="text-gray-400 text-sm">{user?.created_at ? `Joined ${new Date(user.created_at).toLocaleDateString()}` : 'Member'}</p>
+          <p className="text-gray-400 text-sm">{user?.createdAt || user?.created_at ? `Joined ${new Date(user?.createdAt || user?.created_at || '').toLocaleDateString()}` : 'Member'}</p>
           <div className="flex flex-wrap gap-3 mt-3 justify-center sm:justify-start">
-            {user?.location && (
+            {(user?.profile?.location || user?.location) && (
               <span className="flex items-center gap-1 text-xs text-gray-400">
-                <MapPinIcon className="w-3.5 h-3.5" /> {user.location}
+                <MapPinIcon className="w-3.5 h-3.5" /> {user?.profile?.location || user?.location}
               </span>
             )}
-            {user?.website && (
+            {(user?.profile?.website || user?.website) && (
               <span className="flex items-center gap-1 text-xs text-gray-400">
-                <LinkIcon className="w-3.5 h-3.5" /> {user.website}
+                <LinkIcon className="w-3.5 h-3.5" /> {user?.profile?.website || user?.website}
               </span>
             )}
           </div>
