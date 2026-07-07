@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // "standalone" lets Netlify's @netlify/plugin-nextjs handle SSR routes
-  output: "standalone",
+
 
   // Allow external images (e.g. Supabase storage, user avatars)
   images: {
