@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import SearchBar from '../../components/search/SearchBar';
 import SearchResults from '../../components/search/SearchResults';
+import SearchFilters from '../../components/search/SearchFilters';
 import { useSearch } from '../../hooks/useSearch';
 
 export default function SearchPage() {
@@ -22,6 +23,14 @@ export default function SearchPage() {
   const [inputValue, setInputValue] = useState('');
   const [aiMode, setAiMode] = useState(false);
   const [aiContext, setAiContext] = useState('');
+  const ALL_PROVIDERS = ["youtube", "github", "reddit", "medium", "website"];
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(ALL_PROVIDERS);
+  const [filters, setFilters] = useState({
+    order: 'relevance',
+    videoDuration: 'any',
+    videoCategoryId: '',
+    relevanceLanguage: 'en',
+  });
 
   // Sync inputs with the current active query (important when traversing query history)
   useEffect(() => {
@@ -42,7 +51,23 @@ export default function SearchPage() {
       q: trimmed,
       aiMode,
       aiContext: aiMode ? aiContext : undefined,
+      providers: selectedProviders.join(","),
+      order: filters.order,
+      videoDuration: filters.videoDuration,
+      videoCategoryId: filters.videoCategoryId,
+      relevanceLanguage: filters.relevanceLanguage,
     });
+  };
+
+  const handleToggleProvider = (id: string) => {
+    setSelectedProviders((prev) => {
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      return [...prev, id];
+    });
+  };
+
+  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -72,6 +97,14 @@ export default function SearchPage() {
         aiContext={aiContext}
         onAiContextChange={setAiContext}
       />
+      <div className="mt-4">
+        <SearchFilters
+          selected={selectedProviders}
+          onToggle={handleToggleProvider}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+        />
+      </div>
       <SearchResults
         results={results}
         isLoading={isLoading}
