@@ -8,8 +8,8 @@ export class YouTubeProvider implements ContentProvider {
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey || apiKey === "AIzaSy..." || apiKey.includes("your-")) {
-      console.warn("YouTube API Key not set. Using mock YouTube search.");
-      return this.getMockResults(query);
+      console.warn("YouTube API Key not set. Search disabled; returning no results.");
+      return [];
     }
 
     try {
@@ -124,7 +124,7 @@ export class YouTubeProvider implements ContentProvider {
       });
     } catch (err: any) {
       console.error("YouTube search error:", err.message);
-      return this.getMockResults(query);
+      return [];
     }
   }
 
@@ -139,41 +139,5 @@ export class YouTubeProvider implements ContentProvider {
     return hours * 3600 + minutes * 60 + seconds;
   }
 
-  private getMockResults(query: string): Content[] {
-    return [
-      {
-        id: "youtube_mock1",
-        title: `Introduction to ${query || "Machine Learning"} - Beginners Course`,
-        url: "https://www.youtube.com/watch?v=mock1",
-        source: "youtube",
-        type: "video",
-        thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500&auto=format&fit=crop&q=60",
-        description: `Get started with ${query || "Machine Learning"} in this comprehensive tutorial for beginners.`,
-        author: "Tech Learning Academy",
-        duration: 3600,
-        viewCount: 150000,
-        tags: ["youtube", "tutorial", "beginners"],
-        language: "en",
-        metadata: {},
-        createdAt: new Date(),
-      },
-      {
-        id: "youtube_mock2",
-        title: `Advanced ${query || "React"} Concepts Explained`,
-        url: "https://www.youtube.com/watch?v=mock2",
-        source: "youtube",
-        type: "video",
-        thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=500&auto=format&fit=crop&q=60",
-        description: `Dive deep into advanced concepts of ${query || "React"} including custom hooks, context API, and performance optimizations.`,
-        author: "Frontend Mastery",
-        duration: 1800,
-        viewCount: 85000,
-        tags: ["youtube", "advanced", "react"],
-        language: "en",
-        metadata: {},
-        createdAt: new Date(),
-      },
-    ];
-  }
 }
 
