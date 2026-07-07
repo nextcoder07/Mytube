@@ -14,9 +14,9 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
       return next(new HttpError(400, "Query parameter 'q' is required"));
     }
 
-    const providers = req.query.providers
-      ? (req.query.providers as string).split(",")
-      : undefined;
+      const providers = req.query.providers
+        ? (req.query.providers as string).split(",").map((p) => p.trim())
+        : undefined;
 
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
 
@@ -26,7 +26,9 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
     const videoCategoryId = req.query.videoCategoryId as string | undefined;
     const relevanceLanguage = req.query.relevanceLanguage as string | undefined;
 
-    const results = await SearchService.search(user.uid, query, {
+      console.debug("[search.controller] userId=", userId, "query=", query, "providers=", providers, "limit=", limit);
+
+    const results = await SearchService.search(userId, query, {
       providers,
       limit,
       order,
@@ -34,6 +36,7 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
       videoCategoryId,
       relevanceLanguage,
     });
+      console.debug("[search.controller] returning results count=", Array.isArray(results) ? results.length : 0);
     res.status(200).json(success(results, "Search completed"));
   } catch (err: any) {
     next(err);

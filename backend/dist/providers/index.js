@@ -17,7 +17,7 @@ class ProviderManager {
         this.register(new website_1.WebsiteProvider());
     }
     register(provider) {
-        this.providers.set(provider.name, provider);
+        this.providers.set(provider.name.toLowerCase(), provider);
     }
     /**
      * Search all active providers
@@ -31,7 +31,7 @@ class ProviderManager {
      */
     async searchSelected(providerNames, query, options) {
         const promises = providerNames.map(async (name) => {
-            const provider = this.providers.get(name);
+            const provider = this.providers.get(name.toLowerCase());
             if (!provider) {
                 console.warn(`Provider ${name} not registered.`);
                 return [];

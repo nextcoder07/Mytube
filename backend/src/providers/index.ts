@@ -20,7 +20,7 @@ export class ProviderManager {
   }
 
   register(provider: ContentProvider): void {
-    this.providers.set(provider.name, provider);
+    this.providers.set(provider.name.toLowerCase(), provider);
   }
 
   /**
@@ -40,7 +40,7 @@ export class ProviderManager {
     options?: SearchOptions
   ): Promise<Content[]> {
     const promises = providerNames.map(async (name) => {
-      const provider = this.providers.get(name);
+      const provider = this.providers.get(name.toLowerCase());
       if (!provider) {
         console.warn(`Provider ${name} not registered.`);
         return [];

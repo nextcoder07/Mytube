@@ -25,9 +25,11 @@ export class SearchService {
     options?: SearchOptions
   ): Promise<Content[]> {
     const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website"];
-    
+    console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
+
     // 1. Fetch raw content from providers in parallel
     const rawResults = await providerManager.searchSelected(providers, query, options);
+    console.debug("[SearchService.search] raw results fetched count=", rawResults.length);
 
     // 2. Deduplicate by URL
     const uniqueMap = new Map<string, Content>();
@@ -37,6 +39,7 @@ export class SearchService {
       }
     });
     const deduplicated = Array.from(uniqueMap.values());
+    console.debug("[SearchService.search] deduplicated count=", deduplicated.length);
 
     // 3. Rank results
     const ranked = this.rankResults(deduplicated, query);
@@ -53,6 +56,9 @@ export class SearchService {
     }
 
     const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
+    if ((sliced || []).length === 0) {
+      console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
+    }
     return sliced;
   }
 

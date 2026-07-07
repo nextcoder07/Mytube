@@ -22,8 +22,10 @@ class SearchService {
      */
     static async search(userId, query, options) {
         const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website"];
+        console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
         // 1. Fetch raw content from providers in parallel
         const rawResults = await providers_1.default.searchSelected(providers, query, options);
+        console.debug("[SearchService.search] raw results fetched count=", rawResults.length);
         // 2. Deduplicate by URL
         const uniqueMap = new Map();
         rawResults.forEach((item) => {
@@ -32,6 +34,7 @@ class SearchService {
             }
         });
         const deduplicated = Array.from(uniqueMap.values());
+        console.debug("[SearchService.search] deduplicated count=", deduplicated.length);
         // 3. Rank results
         const ranked = this.rankResults(deduplicated, query);
         // 4. Save search history & save new content records in DB asynchronously
@@ -41,6 +44,9 @@ class SearchService {
             this.persistContent(ranked).catch((err) => console.error("Failed to persist content:", err.message));
         }
         const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
+        if ((sliced || []).length === 0) {
+            console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
+        }
         return sliced;
     }
     /**

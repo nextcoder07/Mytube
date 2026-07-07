@@ -16,7 +16,7 @@ const search = async (req, res, next) => {
             return next(new errors_1.HttpError(400, "Query parameter 'q' is required"));
         }
         const providers = req.query.providers
-            ? req.query.providers.split(",")
+            ? req.query.providers.split(",").map((p) => p.trim())
             : undefined;
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
         // YouTube-optimized filter params
@@ -24,7 +24,8 @@ const search = async (req, res, next) => {
         const videoDuration = req.query.videoDuration;
         const videoCategoryId = req.query.videoCategoryId;
         const relevanceLanguage = req.query.relevanceLanguage;
-        const results = await search_service_1.default.search(user.uid, query, {
+        console.debug("[search.controller] userId=", userId, "query=", query, "providers=", providers, "limit=", limit);
+        const results = await search_service_1.default.search(userId, query, {
             providers,
             limit,
             order,
@@ -32,6 +33,7 @@ const search = async (req, res, next) => {
             videoCategoryId,
             relevanceLanguage,
         });
+        console.debug("[search.controller] returning results count=", Array.isArray(results) ? results.length : 0);
         res.status(200).json((0, response_1.success)(results, "Search completed"));
     }
     catch (err) {
