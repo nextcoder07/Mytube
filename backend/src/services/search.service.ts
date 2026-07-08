@@ -27,8 +27,15 @@ export class SearchService {
     const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website"];
     console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
 
+    const targetLimit = options?.limit || 100;
+    // Request a larger pool of results from providers to rank and filter effectively
+    const providerOptions = {
+      ...options,
+      limit: Math.max(targetLimit * 2, 200)
+    };
+
     // 1. Fetch raw content from providers in parallel
-    const rawResults = await providerManager.searchSelected(providers, query, options);
+    const rawResults = await providerManager.searchSelected(providers, query, providerOptions);
     console.debug("[SearchService.search] raw results fetched count=", rawResults.length);
 
     // 2. Deduplicate by URL

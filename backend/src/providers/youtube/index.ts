@@ -6,7 +6,7 @@ export class YouTubeProvider implements ContentProvider {
   name = "youtube";
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
-    const apiKey = process.env.YOUTUBE_API_KEY;
+    const apiKey = process.env.YOUTUBE_API_KEY?.replace(/^["']|["']$/g, "");
     if (!apiKey || apiKey === "AIzaSy..." || apiKey.includes("your-")) {
       console.warn("YouTube API Key not set. Search disabled; returning no results.");
       return [];
