@@ -33,4 +33,5 @@ export interface SearchOptions {
   relevanceLanguage?: string;
   // AI Search personalization
   aiContext?: string;
+  after?: string; // date string (freshness constraint)
 }

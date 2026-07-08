@@ -25,6 +25,7 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
     const videoDuration = req.query.videoDuration as 'any' | 'short' | 'medium' | 'long' | undefined;
     const videoCategoryId = req.query.videoCategoryId as string | undefined;
     const relevanceLanguage = req.query.relevanceLanguage as string | undefined;
+    const after = req.query.after as string | undefined;
 
       console.debug("[search.controller] userId=", userId, "query=", query, "providers=", providers, "limit=", limit);
 
@@ -35,6 +36,7 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
       videoDuration,
       videoCategoryId,
       relevanceLanguage,
+      after,
     });
       console.debug("[search.controller] returning results count=", Array.isArray(results) ? results.length : 0);
     res.status(200).json(success(results, "Search completed"));

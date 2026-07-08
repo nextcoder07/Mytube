@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function AuthButton() {
-  const { user, token, signOut, isLoading } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
