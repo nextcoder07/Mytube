@@ -100,3 +100,35 @@ export const LANGUAGES = [
   { code: 'ar', label: 'Arabic' },
 ] as const;
 
+export interface Goal {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  category: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  status: "active" | "completed" | "paused";
+  targetDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoadmapPhase {
+  title: string;
+  description: string;
+  weeks: number;
+  topics: string[];
+  resourcesSuggested?: string[];
+}
+
+export interface Roadmap {
+  id: string;
+  userId: string;
+  goalId: string;
+  title: string;
+  description?: string;
+  phases: RoadmapPhase[];
+  createdAt: string;
+}
+
+

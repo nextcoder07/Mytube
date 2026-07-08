@@ -22,6 +22,7 @@ import {
 const navigation = [
   { name: "Home", href: "/", icon: HomeIcon },
   { name: "Dashboard", href: "/dashboard", icon: Squares2X2Icon },
+  { name: "Goals", href: "/goals", icon: Squares2X2Icon }, // Using Squares2X2Icon or another icon
   { name: "Feed", href: "/feed", icon: PlayCircleIcon },
   { name: "Search", href: "/search", icon: MagnifyingGlassIcon },
   { name: "Playlists", href: "/playlist", icon: QueueListIcon },

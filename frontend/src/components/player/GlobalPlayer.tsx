@@ -141,26 +141,51 @@ export default function GlobalPlayer() {
               allowFullScreen
             ></iframe>
           ) : (
-            <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-              {/* Browser Header */}
-              <div className="w-full bg-gray-100 border-b border-gray-300 p-2 flex items-center justify-between text-black text-sm relative z-10">
-                <div className="truncate px-2 font-medium text-gray-700 text-xs w-[65%]">{activeContent.url}</div>
-                <a
-                  href={activeContent.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded font-medium transition-colors text-xs shadow"
-                >
-                  Open in New Tab
-                </a>
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white select-none">
+              <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-5 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                <div className="flex justify-center">
+                  {activeContent.thumbnail ? (
+                    <img
+                      src={activeContent.thumbnail}
+                      alt={activeContent.title}
+                      className="w-24 h-24 rounded-xl object-cover border border-slate-800 shadow"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                      <SparklesIcon className="w-10 h-10" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[10px] font-bold uppercase tracking-wider">
+                    {activeContent.source}
+                  </span>
+                  <h3 className="text-base font-extrabold line-clamp-2">{activeContent.title}</h3>
+                  <p className="text-xs text-gray-400 font-medium">By {activeContent.author || "Unknown Author"}</p>
+                </div>
+
+                {activeContent.description && (
+                  <p className="text-xs text-gray-500 line-clamp-3 leading-normal">
+                    {activeContent.description}
+                  </p>
+                )}
+
+                <div className="pt-2">
+                  <a
+                    href={activeContent.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all shadow-md shadow-violet-600/15"
+                  >
+                    Open Resource in New Tab
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
               </div>
-              {/* Webpage Viewer */}
-              <iframe
-                className="w-full flex-1"
-                src={activeContent.url}
-                title="Webpage Viewer"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-              ></iframe>
             </div>
           )}
         </div>

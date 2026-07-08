@@ -52,18 +52,10 @@ export default function Navbar() {
           )}
 
           <Link href="/" className="flex items-center space-x-2 ml-1">
-            {//<Image src="/logo.svg" alt="Mytube" width={32} height={32} priority />}
-            }
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
               Mytube
             </span>
           </Link>
-          <Link href="/auth" className="ml-4 hidden md:inline-block text-sm font-medium text-gray-700 dark:text-gray-300 hover:underline">
-            Sign in / Register
-          </Link>
-          <nav className="hidden md:flex items-center space-x-3 ml-4">
-            <Link href="/auth" className="text-sm text-gray-600 dark:text-gray-300 hover:underline">Sign in</Link>
-          </nav>
         </div>
         <div className="flex items-center gap-3">
           <AuthButton />

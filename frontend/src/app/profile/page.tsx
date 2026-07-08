@@ -7,7 +7,7 @@ import auth from '@/lib/firebase';
 import { sendEmailVerification, reload } from 'firebase/auth';
 
 export default function ProfilePage() {
-  const { user, token, fetchCurrentUser } = useAuth();
+  const { user, token, fetchCurrentUser, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [sending, setSending] = useState(false);
@@ -68,6 +68,10 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSignOut = () => {
+    signOut();
+  };
+
   if (!token) {
     return (
       <main className="p-6 max-w-3xl mx-auto">
@@ -112,24 +116,29 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-          <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex flex-col items-end gap-3">
+          <div className="flex gap-2">
             <button id="edit-profile-btn" className="btn-neon px-4 py-2 text-sm">Edit Profile</button>
-            <div className="text-sm text-gray-300">
-              {emailVerified === null ? (
-                <span className="text-gray-400">Verification: unknown</span>
-              ) : emailVerified ? (
-                <span className="text-emerald-400">Email verified</span>
-              ) : (
-                <span className="text-yellow-400">Email not verified</span>
-              )}
-            </div>
-            {!emailVerified && (
-              <div className="flex flex-col">
-                <button onClick={handleResend} disabled={sending} className="btn-secondary px-3 py-1 text-sm mt-1">Resend verification</button>
-                <button onClick={handleRefreshVerification} className="btn-tertiary px-3 py-1 text-xs mt-1">Refresh status</button>
-              </div>
+            <button onClick={handleSignOut} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl text-sm font-bold border border-gray-700 transition-colors">
+              Sign Out
+            </button>
+          </div>
+          <div className="text-sm text-gray-300">
+            {emailVerified === null ? (
+              <span className="text-gray-400">Verification: unknown</span>
+            ) : emailVerified ? (
+              <span className="text-emerald-400">Email verified</span>
+            ) : (
+              <span className="text-yellow-400">Email not verified</span>
             )}
           </div>
+          {!emailVerified && (
+            <div className="flex flex-col">
+              <button onClick={handleResend} disabled={sending} className="btn-secondary px-3 py-1 text-sm mt-1">Resend verification</button>
+              <button onClick={handleRefreshVerification} className="btn-tertiary px-3 py-1 text-xs mt-1">Refresh status</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bio */}

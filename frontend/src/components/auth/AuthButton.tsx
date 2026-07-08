@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AuthButton() {
   const { user, token, signOut, isLoading } = useAuth();
@@ -40,20 +41,17 @@ export default function AuthButton() {
   const name = (user && (user.displayName || user.display_name || user.name || user.email || 'User')) || 'User';
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700">
+    <Link href="/profile" className="flex items-center gap-3 cursor-pointer">
+      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700 hover:ring-2 hover:ring-violet-500 transition-all">
         {avatar ? (
-          // next/image requires allowed domains in next.config for external urls — fallback to simple img if needed
-          // Use native img to avoid build-time issues with external domains
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={avatar} alt={name} className="w-8 h-8 object-cover" />
         ) : (
-          <div className="w-8 h-8 bg-gray-600" />
+          <div className="w-8 h-8 bg-gray-600 flex items-center justify-center text-xs font-bold text-white uppercase">
+            {name.charAt(0)}
+          </div>
         )}
       </div>
-      <button onClick={handleLogout} className="btn-secondary px-3 py-1 text-sm">
-        Logout
-      </button>
-    </div>
+    </Link>
   );
 }
+

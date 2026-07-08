@@ -43,6 +43,15 @@ export default function ContentCard({
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
+  const getDomain = (url: string) => {
+    try {
+      const u = new URL(url);
+      return u.hostname.replace("www.", "");
+    } catch {
+      return "";
+    }
+  };
+
   return (
     <div 
       className="glow-card flex flex-col h-full overflow-hidden cursor-pointer hover:border-violet-500/50 transition-colors"
@@ -83,9 +92,14 @@ export default function ContentCard({
           {content.title}
         </h3>
 
-        {content.author && (
-          <p className="text-xs text-gray-400 mb-2 font-medium">By {content.author}</p>
-        )}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          {content.author && (
+            <p className="text-xs text-gray-400 font-medium truncate">By {content.author}</p>
+          )}
+          {content.source === "website" && (
+            <span className="text-[10px] text-gray-500 font-medium shrink-0">{getDomain(content.url)}</span>
+          )}
+        </div>
 
         <p className="text-xs text-gray-400 line-clamp-3 mb-4 leading-relaxed flex-1">
           {content.description || "No description provided."}
@@ -102,18 +116,18 @@ export default function ContentCard({
           {content.source === "reddit" && content.metadata.ups !== undefined && (
             <span>🔺 {content.metadata.ups} points</span>
           )}
-          {content.tags && content.tags.slice(0, 2).map((t) => (
-            <span key={t} className="px-1.5 py-0.5 bg-slate-900 border border-slate-800 text-gray-400 rounded">
-              #{t}
+          {content.createdAt && (
+            <span className="ml-auto text-[10px] text-gray-600 font-medium">
+              {new Date(content.createdAt).toLocaleDateString()}
             </span>
-          ))}
+          )}
         </div>
 
         {/* AI Explanation block if available */}
         {content.metadata.aiExplanation && (
           <div className="mt-2 p-2.5 bg-violet-950/20 border border-violet-500/20 rounded-lg">
             <div className="flex items-center gap-1.5 text-xs text-violet-400 font-bold mb-1">
-              <SparklesIcon className="h-4.5 w-4.5" />
+              <SparklesIcon className="h-4 w-4" />
               <span>AI Recommendation Context</span>
             </div>
             <p className="text-[11px] leading-normal text-violet-300 italic">
@@ -125,3 +139,4 @@ export default function ContentCard({
     </div>
   );
 }
+
