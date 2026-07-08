@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function AuthButton() {
-  const { user, token, isLoading } = useAuth();
+  const { user, token, signOut, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
   const router = useRouter();
   const handleOpenAuth = () => router.push('/auth/login');
+
+  const handleLogout = () => {
+    signOut();
+  };
 
   if (isLoading) {
     return <button className="btn-neon px-3 py-1">Signing in...</button>;

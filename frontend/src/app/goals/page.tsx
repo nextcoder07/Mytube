@@ -208,9 +208,9 @@ export default function GoalsPage() {
                               <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
                                 <div className="flex justify-between items-start gap-4">
                                   <h4 className="font-bold text-white text-sm">{phase.title}</h4>
-                                  {phase.weeks && (
+                                  {phase.duration && (
                                     <span className="px-2 py-0.5 rounded bg-violet-600/20 border border-violet-500/20 text-violet-400 text-[10px] font-bold">
-                                      {phase.weeks} {phase.weeks === 1 ? 'Week' : 'Weeks'}
+                                      {phase.duration}
                                     </span>
                                   )}
                                 </div>
@@ -314,7 +314,7 @@ export default function GoalsPage() {
                   </label>
                   <select
                     value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
+                    onChange={(e) => setDifficulty(e.target.value as any)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
                   >
                     <option value="beginner">Beginner</option>
