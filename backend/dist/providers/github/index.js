@@ -13,7 +13,7 @@ class GitHubProvider {
             headers["Authorization"] = `token ${token}`;
         }
         try {
-            const totalToFetch = options?.limit || 25;
+            const totalToFetch = options?.limit || 100;
             let allItems = [];
             let page = 1;
             let fetched = 0;
@@ -40,7 +40,7 @@ class GitHubProvider {
                     url: item.html_url,
                     source: "github",
                     type: "repo",
-                    thumbnail: item.owner?.avatar_url || "https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=500&auto=format&fit=crop&q=60",
+                    thumbnail: item.owner?.avatar_url,
                     description: item.description,
                     author: item.owner?.login,
                     viewCount: item.stargazers_count,
@@ -57,27 +57,8 @@ class GitHubProvider {
         }
         catch (err) {
             console.error("GitHub search error:", err.message);
-            return this.getMockResults(query);
+            return [];
         }
-    }
-    getMockResults(query) {
-        return [
-            {
-                id: "github_mock1",
-                title: `developer-roadmap/${query || "awesome-learning"}`,
-                url: `https://github.com/developer-roadmap/${query || "awesome-learning"}`,
-                source: "github",
-                type: "repo",
-                thumbnail: "https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=500&auto=format&fit=crop&q=60",
-                description: `Curated learning paths, resources, and project ideas for learning ${query || "web development"}.`,
-                author: "developer-roadmap",
-                viewCount: 23500,
-                tags: ["github", "roadmap", "curated-list"],
-                language: "TypeScript",
-                metadata: { stars: 23500, forks: 4200 },
-                createdAt: new Date(),
-            },
-        ];
     }
 }
 exports.GitHubProvider = GitHubProvider;

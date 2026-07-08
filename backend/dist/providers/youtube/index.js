@@ -6,28 +6,19 @@ class YouTubeProvider {
     async search(query, options) {
         const apiKey = process.env.YOUTUBE_API_KEY;
         if (!apiKey || apiKey === "AIzaSy..." || apiKey.includes("your-")) {
-            console.warn("YouTube API Key not set. Using mock YouTube search.");
-            return this.getMockResults(query);
+            console.warn("YouTube API Key not set. Search disabled; returning no results.");
+            return [];
         }
         try {
-            const perPage = Math.min(options?.limit || 25, 50); // YouTube max is 50
+            const perPage = Math.min(options?.limit || 100, 50); // YouTube max is 50
             let allItems = [];
             let pageToken = options?.pageToken;
-            let totalToFetch = options?.limit || 25;
+            let totalToFetch = options?.limit || 100;
             let fetched = 0;
-            // Smart Query Appending: rewrite the query to favor educational, high-signal videos
+            // Use exact query unless an AI context/goal is provided
             let effectiveQuery = query;
-            const normalizedQuery = query.toLowerCase().trim();
-            const needsTutorial = !/(tutorial|course|lesson|guide|explain|beginner|intro|deep dive|documentation)/i.test(normalizedQuery);
-            const wantsLongForm = /(react|next|node|docker|python|typescript|machine learning|ai|system design|database|backend|frontend|javascript|java|go|kubernetes|linux)/i.test(normalizedQuery);
             if (options?.aiContext) {
                 effectiveQuery = `${query} tutorial full course comprehensive`;
-            }
-            else if (needsTutorial) {
-                effectiveQuery = `${query} tutorial`;
-            }
-            if (wantsLongForm) {
-                effectiveQuery = `${effectiveQuery} full course`.trim();
             }
             // Resolve filter params with defaults
             const order = options?.order || 'relevance';
@@ -108,7 +99,7 @@ class YouTubeProvider {
         }
         catch (err) {
             console.error("YouTube search error:", err.message);
-            return this.getMockResults(query);
+            return [];
         }
     }
     parseISO8601Duration(durationStr) {
@@ -122,42 +113,6 @@ class YouTubeProvider {
         const minutes = parseInt(matches[2] || "0", 10);
         const seconds = parseInt(matches[3] || "0", 10);
         return hours * 3600 + minutes * 60 + seconds;
-    }
-    getMockResults(query) {
-        return [
-            {
-                id: "youtube_mock1",
-                title: `Introduction to ${query || "Machine Learning"} - Beginners Course`,
-                url: "https://www.youtube.com/watch?v=mock1",
-                source: "youtube",
-                type: "video",
-                thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500&auto=format&fit=crop&q=60",
-                description: `Get started with ${query || "Machine Learning"} in this comprehensive tutorial for beginners.`,
-                author: "Tech Learning Academy",
-                duration: 3600,
-                viewCount: 150000,
-                tags: ["youtube", "tutorial", "beginners"],
-                language: "en",
-                metadata: {},
-                createdAt: new Date(),
-            },
-            {
-                id: "youtube_mock2",
-                title: `Advanced ${query || "React"} Concepts Explained`,
-                url: "https://www.youtube.com/watch?v=mock2",
-                source: "youtube",
-                type: "video",
-                thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=500&auto=format&fit=crop&q=60",
-                description: `Dive deep into advanced concepts of ${query || "React"} including custom hooks, context API, and performance optimizations.`,
-                author: "Frontend Mastery",
-                duration: 1800,
-                viewCount: 85000,
-                tags: ["youtube", "advanced", "react"],
-                language: "en",
-                metadata: {},
-                createdAt: new Date(),
-            },
-        ];
     }
 }
 exports.YouTubeProvider = YouTubeProvider;

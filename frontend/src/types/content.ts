@@ -115,10 +115,12 @@ export interface Goal {
 
 export interface RoadmapPhase {
   title: string;
-  description: string;
-  weeks: number;
+  description?: string;
+  weeks?: number;
+  duration?: string;
   topics: string[];
   resourcesSuggested?: string[];
+  resources?: string[];
 }
 
 export interface Roadmap {

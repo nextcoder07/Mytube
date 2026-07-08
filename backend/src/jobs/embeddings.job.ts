@@ -5,7 +5,7 @@ import logger from '../utils/logger';
 
 export const embeddingsWorker = new Worker(
   'embeddings',
-  async (job) => {
+  async (job: any) => {
     const { contentId } = job.data as { contentId: string };
     // TODO: integrate a vector embedding service (e.g. Supabase pgvector / Pinecone)
     logger.info(`[embeddings] Embedding job for content ${contentId} — placeholder`);

@@ -6,7 +6,7 @@ import logger from '../utils/logger';
 
 export const analyticsWorker = new Worker(
   'analytics',
-  async (job) => {
+  async (job: any) => {
     const { events } = job.data as { events: Array<{ userId: string; event: string; metadata?: unknown }> };
     if (!events?.length) return;
 

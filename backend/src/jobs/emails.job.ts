@@ -5,7 +5,7 @@ import logger from '../utils/logger';
 
 export const emailsWorker = new Worker(
   'emails',
-  async (job) => {
+  async (job: any) => {
     const { to, subject, body, type } = job.data as {
       to: string;
       subject: string;

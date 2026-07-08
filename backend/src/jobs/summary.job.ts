@@ -9,7 +9,7 @@ const gateway = new AIGateway();
 
 export const summaryWorker = new Worker(
   'summary',
-  async (job) => {
+  async (job: any) => {
     const { contentId, title, description, url } = job.data as {
       contentId: string;
       title: string;

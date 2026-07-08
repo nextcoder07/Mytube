@@ -7,7 +7,7 @@ export class RedditProvider implements ContentProvider {
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     try {
-      const totalToFetch = options?.limit || 25;
+      const totalToFetch = options?.limit || 100;
       let allChildren: any[] = [];
       let after: string | null = null;
       let fetched = 0;

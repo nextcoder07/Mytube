@@ -13,26 +13,16 @@ export class YouTubeProvider implements ContentProvider {
     }
 
     try {
-      const perPage = Math.min(options?.limit || 25, 50); // YouTube max is 50
+      const perPage = Math.min(options?.limit || 100, 50); // YouTube max is 50
       let allItems: any[] = [];
       let pageToken: string | undefined = options?.pageToken as string | undefined;
-      let totalToFetch = options?.limit || 25;
+      let totalToFetch = options?.limit || 100;
       let fetched = 0;
 
-      // Smart Query Appending: rewrite the query to favor educational, high-signal videos
+      // Use exact query unless an AI context/goal is provided
       let effectiveQuery = query;
-      const normalizedQuery = query.toLowerCase().trim();
-      const needsTutorial = !/(tutorial|course|lesson|guide|explain|beginner|intro|deep dive|documentation)/i.test(normalizedQuery);
-      const wantsLongForm = /(react|next|node|docker|python|typescript|machine learning|ai|system design|database|backend|frontend|javascript|java|go|kubernetes|linux)/i.test(normalizedQuery);
-
       if (options?.aiContext) {
-        effectiveQuery = `${query} tutorial full course comprehensive`; 
-      } else if (needsTutorial) {
-        effectiveQuery = `${query} tutorial`; 
-      }
-
-      if (wantsLongForm) {
-        effectiveQuery = `${effectiveQuery} full course`.trim();
+        effectiveQuery = `${query} tutorial full course comprehensive`;
       }
 
       // Resolve filter params with defaults

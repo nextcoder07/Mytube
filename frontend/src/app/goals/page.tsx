@@ -314,7 +314,7 @@ export default function GoalsPage() {
                   </label>
                   <select
                     value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as any)}
+                    onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
                   >
                     <option value="beginner">Beginner</option>

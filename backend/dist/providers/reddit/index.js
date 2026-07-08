@@ -5,7 +5,7 @@ class RedditProvider {
     name = "reddit";
     async search(query, options) {
         try {
-            const totalToFetch = options?.limit || 25;
+            const totalToFetch = options?.limit || 100;
             let allChildren = [];
             let after = null;
             let fetched = 0;
@@ -39,7 +39,7 @@ class RedditProvider {
                     url: `https://www.reddit.com${item.permalink}`,
                     source: "reddit",
                     type: "post",
-                    thumbnail: item.thumbnail && item.thumbnail.startsWith("http") ? item.thumbnail : "https://images.unsplash.com/photo-1614332287897-cdc485fa562d?w=500&auto=format&fit=crop&q=60",
+                    thumbnail: item.thumbnail && item.thumbnail.startsWith("http") ? item.thumbnail : undefined,
                     description: item.selftext?.substring(0, 300) || `Discussion in r/${item.subreddit}`,
                     author: `u/${item.author}`,
                     viewCount: item.score,
@@ -56,27 +56,8 @@ class RedditProvider {
         }
         catch (err) {
             console.error("Reddit search error:", err.message);
-            return this.getMockResults(query);
+            return [];
         }
-    }
-    getMockResults(query) {
-        return [
-            {
-                id: "reddit_mock1",
-                title: `What is the best way to learn ${query || "Data Science"} in 2026?`,
-                url: "https://www.reddit.com/r/learnprogramming/comments/mockreddit",
-                source: "reddit",
-                type: "post",
-                thumbnail: "https://images.unsplash.com/photo-1614332287897-cdc485fa562d?w=500&auto=format&fit=crop&q=60",
-                description: "Hey everyone! I want to start my journey into data science. What are the best tutorials, websites, or courses to use?",
-                author: "u/eager_learner",
-                viewCount: 432,
-                tags: ["reddit", "learnprogramming"],
-                language: "en",
-                metadata: { subreddit: "learnprogramming", ups: 432, numComments: 89 },
-                createdAt: new Date(),
-            },
-        ];
     }
 }
 exports.RedditProvider = RedditProvider;

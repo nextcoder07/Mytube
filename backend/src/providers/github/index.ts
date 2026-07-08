@@ -17,7 +17,7 @@ export class GitHubProvider implements ContentProvider {
     }
 
     try {
-      const totalToFetch = options?.limit || 25;
+      const totalToFetch = options?.limit || 100;
       let allItems: any[] = [];
       let page = 1;
       let fetched = 0;

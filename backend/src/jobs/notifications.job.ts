@@ -6,7 +6,7 @@ import logger from '../utils/logger';
 
 export const notificationsWorker = new Worker(
   'notifications',
-  async (job) => {
+  async (job: any) => {
     const { userId, type, title, body } = job.data as {
       userId: string;
       type: string;

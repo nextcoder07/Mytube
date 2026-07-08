@@ -43,7 +43,8 @@ class SearchService {
             this.saveSearchHistory(userId, query, providers).catch((err) => console.error("Failed to save search history:", err.message));
             this.persistContent(ranked).catch((err) => console.error("Failed to persist content:", err.message));
         }
-        const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
+        const limit = options?.limit || 100;
+        const sliced = ranked.slice(0, limit);
         if ((sliced || []).length === 0) {
             console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
         }
@@ -214,10 +215,6 @@ Schema:
             return true;
         return false;
     }
-    /**
-     * Smarter heuristic ranking using query decomposition, exact matches, season/episode matching,
-     * spam/reaction penalties, and raw relevance order.
-     */
     static rankResults(items, query) {
         const querySE = this.extractSeasonAndEpisode(query);
         const normalizedCleanQuery = this.normalizeText(querySE.cleanText);
@@ -225,21 +222,12 @@ Schema:
         const queryTokens = normalizedCleanQuery
             .split(/\s+/)
             .filter(token => token.length >= 2 || /^\d+$/.test(token));
-        const tokensToMatch = queryTokens.length > 0 ? queryTokens : [normalizedCleanQuery];
         return items
             .map((item, index) => {
             let score = 0;
-            const titleLower = item.title.toLowerCase();
             const normalizedTitle = this.normalizeText(item.title);
             const normalizedDesc = this.normalizeText(item.description || "");
-            // 1. Strict validation: must match at least one token in title, description, or tags
-            const hasMatch = tokensToMatch.some(token => this.matchToken(token, normalizedTitle) ||
-                this.matchToken(token, normalizedDesc) ||
-                (item.tags && item.tags.some(tag => this.matchToken(token, tag.toLowerCase()))));
-            if (!hasMatch) {
-                return { item, score: -1 };
-            }
-            // 2. Season/Episode Matching
+            // 1. Season/Episode Matching (if specified in query)
             const titleSE = this.extractSeasonAndEpisode(item.title);
             // Season check
             if (querySE.season !== null) {
@@ -248,13 +236,12 @@ Schema:
                         score += 100;
                     }
                     else {
-                        // Heavy penalty for mismatching season
-                        score -= 200;
+                        // Mild penalty for mismatching season, not filtering it out
+                        score -= 50;
                     }
                 }
                 else {
-                    // Title didn't specify season: moderate penalty
-                    score -= 30;
+                    score -= 10;
                 }
             }
             // Episode check
@@ -264,30 +251,19 @@ Schema:
                         score += 150;
                     }
                     else {
-                        // Heavy penalty for mismatching episode
-                        score -= 200;
+                        // Mild penalty for mismatching episode
+                        score -= 50;
                     }
                 }
                 else {
-                    // Title didn't specify episode: moderate penalty
-                    score -= 50;
+                    score -= 10;
                 }
             }
-            // 3. Spam / Clickbait / Reaction Penalty
-            // Penalize if title has reaction/review terms but query doesn't
-            const spamKeywords = ["reaction", "review", "teaser", "trailer", "promo", "release date", "countdown", "roast", "parody", "meme", "shorts"];
-            const queryHasSpam = spamKeywords.some(word => query.toLowerCase().includes(word));
-            if (!queryHasSpam) {
-                const titleHasSpam = spamKeywords.some(word => titleLower.includes(word));
-                if (titleHasSpam) {
-                    score -= 120;
-                }
-            }
-            // 4. Exact Phrase Boost
+            // 2. Exact Phrase Boost
             if (normalizedTitle.includes(normalizedCleanQuery)) {
-                score += 100;
+                score += 150;
             }
-            // 5. Keyword Token Coverage Boost
+            // 3. Keyword Token Coverage Boost
             let titleTokenMatches = 0;
             queryTokens.forEach(token => {
                 if (this.matchToken(token, normalizedTitle)) {
@@ -299,11 +275,11 @@ Schema:
             if (coverageRatio === 1.0) {
                 score += 50; // Extra bonus for matching all query tokens
             }
-            // 6. Original list index weight (preserves API rank as tie-breaker)
-            // YouTube/GitHub etc. return most relevant first, so keep that signal
-            const indexBoost = Math.max(0, 20 - index);
+            // 4. Original list index weight (preserves API rank as tie-breaker)
+            // Since we fetch up to 100 items per provider, scale this boost to 100
+            const indexBoost = Math.max(0, 100 - index);
             score += indexBoost;
-            // 7. Popularity bonus (small contribution to keep it query-first)
+            // 5. Popularity bonus (small contribution to keep it query-first)
             if (item.source === "github" && item.viewCount) {
                 score += Math.min(item.viewCount / 1000, 15);
             }
@@ -315,7 +291,6 @@ Schema:
             }
             return { item, score };
         })
-            .filter(x => x.score >= 0) // Filter out completely irrelevant/mismatched results
             .sort((a, b) => b.score - a.score)
             .map((x) => x.item);
     }
