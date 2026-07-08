@@ -1,5 +1,4 @@
 // frontend/src/hooks/useGoals.ts
-import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import type { Goal, Roadmap } from "../types/content";

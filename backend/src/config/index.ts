@@ -24,6 +24,9 @@ export const config = {
   geminiApiKey: process.env.GEMINI_API_KEY || "your-gemini-api-key",
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "your-openrouter-api-key",
   openrouterModel: process.env.OPENROUTER_MODEL || "openai/gpt-4o",
+  // Google Custom Search Engine (CSE)
+  googleCseApiKey: process.env.GOOGLE_CSE_API_KEY || "",
+  googleCseCx: process.env.GOOGLE_CSE_CX || "",
 };
 
 export default config;
