@@ -14,7 +14,8 @@ export class GoalsService {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return (data || []) as any[];
+    // Normalize DB snake_case -> camelCase for the API contract
+    return (data || []).map((r: any) => GoalsService.normalizeGoalRecord(r));
   }
 
   static async createGoal(
@@ -50,7 +51,7 @@ export class GoalsService {
       .single();
 
     if (error || !data) throw error || new Error("Failed to create goal");
-    return data as any;
+    return GoalsService.normalizeGoalRecord(data as any);
   }
 
   static async updateGoal(
@@ -78,7 +79,7 @@ export class GoalsService {
       .single();
 
     if (error || !data) throw error || new Error("Failed to update goal");
-    return data as any;
+    return GoalsService.normalizeGoalRecord(data as any);
   }
 
   static async deleteGoal(userId: string, goalId: string): Promise<boolean> {
@@ -196,6 +197,8 @@ export class GoalsService {
       .single();
 
     if (error) throw error;
+    // normalize nested goal if present
+    if (data && data.goals) data.goals = GoalsService.normalizeGoalRecord(data.goals);
     return data;
   }
 
@@ -216,24 +219,45 @@ export class GoalsService {
     // Build a compact context string from all matching goals
     return data
       .map((g: any) => {
-        let text = `Goal: ${g.title}`;
-        if (g.description) {
-          try {
-            const json = JSON.parse(g.description);
+          const row = GoalsService.normalizeGoalRecord(g);
+          let text = `Goal: ${row.title}`;
+          if (row.description) {
             const parts: string[] = [];
-            if (json.describe) parts.push(json.describe);
-            if (json.priority1) parts.push(`Priority 1: ${json.priority1}`);
-            if (json.priority2) parts.push(`Priority 2: ${json.priority2}`);
-            if (json.priority3) parts.push(`Priority 3: ${json.priority3}`);
-            text += `. ${parts.join(". ")}`;
-          } catch {
-            text += `. ${g.description}`;
+            try {
+              const json = JSON.parse(row.description || "{}");
+              if (json.describe) parts.push(json.describe);
+              if (json.priority1) parts.push(`Priority 1: ${json.priority1}`);
+              if (json.priority2) parts.push(`Priority 2: ${json.priority2}`);
+              if (json.priority3) parts.push(`Priority 3: ${json.priority3}`);
+            } catch {
+              // not JSON
+            }
+            if (parts.length) text += `. ${parts.join(". ")}`;
+            else text += `. ${row.description}`;
           }
-        }
-        if (g.category) text += `. Category: ${g.category}`;
-        return text;
+          if (row.category) text += `. Category: ${row.category}`;
+          return text;
       })
       .join(" | ");
+  }
+
+  private static normalizeGoalRecord(r: any) {
+    if (!r) return r;
+    return {
+      id: r.id,
+      userId: r.user_id || r.userId,
+      title: r.title,
+      description: r.description,
+      category: r.category,
+      difficulty: r.difficulty,
+      targetDate: r.target_date || r.targetDate,
+      priority1: r.priority1 || null,
+      priority2: r.priority2 || null,
+      priority3: r.priority3 || null,
+      status: r.status,
+      useInSearch: r.use_in_search !== undefined ? r.use_in_search : r.useInSearch,
+      createdAt: r.created_at || r.createdAt,
+    } as Goal;
   }
 }
 
