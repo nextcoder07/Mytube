@@ -12,11 +12,18 @@ export class RedditProvider implements ContentProvider {
       let after: string | null = null;
       let fetched = 0;
 
+      // Map generic order to Reddit sort options
+      const redditSort =
+        options?.order === 'viewCount' ? 'top' :
+        options?.order === 'date' ? 'new' :
+        options?.order === 'rating' ? 'top' :
+        'relevance';
+
       while (fetched < totalToFetch) {
         const batchSize = Math.min(100, totalToFetch - fetched); // Reddit max per request is 100
         let url = `https://www.reddit.com/search.json?q=${encodeURIComponent(
           query
-        )}&sort=relevance&limit=${batchSize}`;
+        )}&sort=${redditSort}&limit=${batchSize}&type=link`;
 
         if (after) {
           url += `&after=${after}`;

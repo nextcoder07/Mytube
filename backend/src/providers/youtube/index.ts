@@ -2,22 +2,104 @@
 import { ContentProvider } from "../base.provider";
 import { Content, SearchOptions } from "../../models/content.model";
 
+/**
+ * Manages multiple YouTube API keys with automatic rotation.
+ * When a key hits 429 (quota exceeded), it's marked as exhausted
+ * and the next available key is used automatically.
+ */
+class YouTubeKeyManager {
+  private keys: string[] = [];
+  private exhaustedUntil: Map<string, number> = new Map(); // key -> timestamp when it can be retried
+  private currentIndex = 0;
+
+  constructor() {
+    this.loadKeys();
+  }
+
+  private loadKeys() {
+    // Support comma-separated list in YOUTUBE_API_KEYS (preferred)
+    const multiKeys = process.env.YOUTUBE_API_KEYS?.replace(/^["']|["']$/g, "");
+    if (multiKeys) {
+      this.keys = multiKeys.split(",").map(k => k.trim()).filter(k => k.length > 0 && !k.includes("your-"));
+    }
+    // Fallback to single YOUTUBE_API_KEY
+    if (this.keys.length === 0) {
+      const singleKey = process.env.YOUTUBE_API_KEY?.replace(/^["']|["']$/g, "");
+      if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-")) {
+        this.keys = [singleKey];
+      }
+    }
+    if (this.keys.length > 0) {
+      console.log(`[YouTubeKeyManager] Loaded ${this.keys.length} API key(s)`);
+    }
+  }
+
+  hasKeys(): boolean {
+    return this.keys.length > 0;
+  }
+
+  /**
+   * Get the next available (non-exhausted) API key.
+   * Returns null if all keys are exhausted.
+   */
+  getKey(): string | null {
+    if (this.keys.length === 0) return null;
+
+    const now = Date.now();
+    // Try each key starting from currentIndex
+    for (let i = 0; i < this.keys.length; i++) {
+      const idx = (this.currentIndex + i) % this.keys.length;
+      const key = this.keys[idx];
+      const exhaustedUntil = this.exhaustedUntil.get(key) || 0;
+      if (now >= exhaustedUntil) {
+        this.currentIndex = idx;
+        return key;
+      }
+    }
+    return null; // all keys exhausted
+  }
+
+  /**
+   * Mark a key as exhausted (rate-limited).
+   * Cooldown: 1 hour (YouTube quota resets daily, but we retry sooner in case of transient limits).
+   */
+  markExhausted(key: string) {
+    const cooldownMs = 60 * 60 * 1000; // 1 hour
+    this.exhaustedUntil.set(key, Date.now() + cooldownMs);
+    // Advance to next key
+    this.currentIndex = (this.currentIndex + 1) % this.keys.length;
+    const remaining = this.keys.filter(k => {
+      const until = this.exhaustedUntil.get(k) || 0;
+      return Date.now() >= until;
+    }).length;
+    console.warn(`[YouTubeKeyManager] Key exhausted (429). ${remaining}/${this.keys.length} keys still available.`);
+  }
+}
+
+// Singleton key manager — persists across requests within the same server process
+const keyManager = new YouTubeKeyManager();
+
 export class YouTubeProvider implements ContentProvider {
   name = "youtube";
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
-    const apiKey = process.env.YOUTUBE_API_KEY?.replace(/^["']|["']$/g, "");
-    if (!apiKey || apiKey === "AIzaSy..." || apiKey.includes("your-")) {
-      console.warn("YouTube API Key not set. Search disabled; returning no results.");
+    if (!keyManager.hasKeys()) {
+      console.warn("YouTube API Key(s) not set. Search disabled; returning no results.");
       return [];
     }
 
     try {
       const perPage = Math.min(options?.limit || 100, 50); // YouTube max is 50
-      let allItems: any[] = [];
+      const allItems: Record<string, unknown>[] = [];
       let pageToken: string | undefined = options?.pageToken as string | undefined;
-      let totalToFetch = options?.limit || 100;
+      const totalToFetch = options?.limit || 100;
       let fetched = 0;
+      let activeKey = keyManager.getKey();
+
+      if (!activeKey) {
+        console.warn("All YouTube API keys are rate-limited. Returning no results.");
+        return [];
+      }
 
       // Use exact query unless an AI context/goal is provided
       let effectiveQuery = query;
@@ -32,6 +114,11 @@ export class YouTubeProvider implements ContentProvider {
 
       // Fetch multiple pages if needed
       while (fetched < totalToFetch) {
+        if (!activeKey) {
+          console.warn("All YouTube API keys exhausted mid-search. Returning partial results.");
+          break;
+        }
+
         const batchSize = Math.min(perPage, totalToFetch - fetched);
 
         // Build optimized search URL with all YouTube Data API filters
@@ -42,7 +129,7 @@ export class YouTubeProvider implements ContentProvider {
           + `&order=${safeOrder}`
           + `&relevanceLanguage=${relevanceLanguage}`
           + `&maxResults=${batchSize}`
-          + `&key=${apiKey}`;
+          + `&key=${activeKey}`;
 
         // Optional: Video duration filter (short/medium/long)
         if (options?.videoDuration && options.videoDuration !== 'any') {
@@ -59,61 +146,96 @@ export class YouTubeProvider implements ContentProvider {
         }
 
         const res = await fetch(searchUrl);
+
+        // Handle rate limiting with key rotation
+        if (res.status === 429 || res.status === 403) {
+          console.warn(`YouTube API returned ${res.status} for current key. Rotating...`);
+          keyManager.markExhausted(activeKey);
+          activeKey = keyManager.getKey();
+          // Retry this same page with the new key (don't increment fetched)
+          continue;
+        }
+
         if (!res.ok) {
           throw new Error(`YouTube API returned status ${res.status}`);
         }
-        const data: any = await res.json();
-        const items = data.items || [];
+        const data = await res.json() as Record<string, unknown>;
+        const items = (data.items || []) as Record<string, unknown>[];
         allItems.push(...items);
         fetched += items.length;
 
-        pageToken = data.nextPageToken;
+        pageToken = data.nextPageToken as string | undefined;
         if (!pageToken || items.length === 0) break; // no more pages
       }
 
-      const videoIds = allItems.map((item: any) => item.id.videoId).filter(Boolean);
+      const videoIds = allItems.map((item: Record<string, unknown>) => {
+        const id = item.id as Record<string, unknown>;
+        return id?.videoId as string;
+      }).filter(Boolean);
 
-      // Fetch durations & views in batches of 50
-      let detailsMap: Record<string, { duration: number; views: number }> = {};
+      // Fetch durations & views in batches of 50, also with key rotation
+      const detailsMap: Record<string, { duration: number; views: number }> = {};
       for (let i = 0; i < videoIds.length; i += 50) {
+        if (!activeKey) {
+          activeKey = keyManager.getKey();
+          if (!activeKey) break;
+        }
+
         const batch = videoIds.slice(i, i + 50);
         const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${batch.join(
           ","
-        )}&key=${apiKey}`;
+        )}&key=${activeKey}`;
         const detailsRes = await fetch(detailsUrl);
+
+        if (detailsRes.status === 429 || detailsRes.status === 403) {
+          keyManager.markExhausted(activeKey);
+          activeKey = keyManager.getKey();
+          if (activeKey) {
+            i -= 50; // retry this batch with new key
+          }
+          continue;
+        }
+
         if (detailsRes.ok) {
-          const detailsData: any = await detailsRes.json();
-          (detailsData.items || []).forEach((v: any) => {
-            detailsMap[v.id] = {
-              duration: this.parseISO8601Duration(v.contentDetails?.duration),
-              views: parseInt(v.statistics?.viewCount || "0", 10),
+          const detailsData = await detailsRes.json() as Record<string, unknown>;
+          const detailItems = (detailsData.items || []) as Record<string, unknown>[];
+          detailItems.forEach((v: Record<string, unknown>) => {
+            const contentDetails = v.contentDetails as Record<string, unknown> | undefined;
+            const statistics = v.statistics as Record<string, unknown> | undefined;
+            detailsMap[v.id as string] = {
+              duration: this.parseISO8601Duration(contentDetails?.duration as string),
+              views: parseInt((statistics?.viewCount as string) || "0", 10),
             };
           });
         }
       }
 
-      return allItems.map((item: any): Content => {
-        const videoId = item.id.videoId;
+      return allItems.map((item: Record<string, unknown>): Content => {
+        const id = item.id as Record<string, unknown>;
+        const snippet = item.snippet as Record<string, unknown>;
+        const thumbnails = snippet.thumbnails as Record<string, Record<string, string>> | undefined;
+        const videoId = id.videoId as string;
         const details = detailsMap[videoId] || { duration: 0, views: 0 };
         return {
           id: `youtube_${videoId}`,
-          title: item.snippet.title,
+          title: snippet.title as string,
           url: `https://www.youtube.com/watch?v=${videoId}`,
           source: "youtube",
           type: "video",
-          thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
-          description: item.snippet.description,
-          author: item.snippet.channelTitle,
+          thumbnail: thumbnails?.high?.url || thumbnails?.default?.url,
+          description: snippet.description as string,
+          author: snippet.channelTitle as string,
           duration: details.duration,
           viewCount: details.views,
           tags: [this.name, "learning"],
           language: "en",
-          metadata: { channelId: item.snippet.channelId },
-          createdAt: new Date(item.snippet.publishedAt),
+          metadata: { channelId: (snippet.channelId as string) },
+          createdAt: new Date(snippet.publishedAt as string),
         };
       });
-    } catch (err: any) {
-      console.error("YouTube search error:", err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("YouTube search error:", message);
       return [];
     }
   }
@@ -128,6 +250,6 @@ export class YouTubeProvider implements ContentProvider {
     const seconds = parseInt(matches[3] || "0", 10);
     return hours * 3600 + minutes * 60 + seconds;
   }
-
 }
+
 

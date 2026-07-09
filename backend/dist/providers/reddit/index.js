@@ -9,15 +9,20 @@ class RedditProvider {
             let allChildren = [];
             let after = null;
             let fetched = 0;
+            // Map generic order to Reddit sort options
+            const redditSort = options?.order === 'viewCount' ? 'top' :
+                options?.order === 'date' ? 'new' :
+                    options?.order === 'rating' ? 'top' :
+                        'relevance';
             while (fetched < totalToFetch) {
                 const batchSize = Math.min(100, totalToFetch - fetched); // Reddit max per request is 100
-                let url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&limit=${batchSize}`;
+                let url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=${redditSort}&limit=${batchSize}&type=link`;
                 if (after) {
                     url += `&after=${after}`;
                 }
                 const res = await fetch(url, {
                     headers: {
-                        "User-Agent": "MyTube-Personalized-Learning/0.1.0 (by /u/mytube_bot)",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     },
                 });
                 if (!res.ok) {

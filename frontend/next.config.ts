@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   // Allow external images (e.g. Supabase storage, user avatars)
   images: {
     remotePatterns: [
@@ -9,7 +8,7 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Env vars available at build time (set real values in Netlify UI)
+  // Env vars available at build time (set real values in Netlify/Vercel UI)
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
