@@ -9,7 +9,7 @@ export class SearchCache {
   private memoryCache = new Map<string, CachedSearchResult>();
   private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
   private readonly BATCH_SIZE = 70; // Results to show per page
-  private readonly FETCH_SIZE = 120; // Results to fetch per batch (for sorting)
+  private readonly FETCH_SIZE = 140; // Fetch 100-140 results per source for caching and ranking
 
   /**
    * Generate cache key from query and optional source

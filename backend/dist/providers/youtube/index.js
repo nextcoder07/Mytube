@@ -14,14 +14,21 @@ class YouTubeKeyManager {
         this.loadKeys();
     }
     loadKeys() {
-        // Support comma-separated list in YOUTUBE_API_KEYS (preferred)
-        const multiKeys = process.env.YOUTUBE_API_KEYS?.replace(/^["']|["']$/g, "");
-        if (multiKeys) {
-            this.keys = multiKeys.split(",").map(k => k.trim()).filter(k => k.length > 0 && !k.includes("your-"));
+        const rawMultiKeys = process.env.YOUTUBE_API_KEYS;
+        if (rawMultiKeys) {
+            const cleaned = rawMultiKeys
+                .trim()
+                .replace(/^['"]|['"]$/g, "")
+                .split(",")
+                .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
+                .filter((k) => k.length > 0 && !k.includes("your-"));
+            if (cleaned.length > 0) {
+                this.keys = cleaned;
+            }
         }
         // Fallback to single YOUTUBE_API_KEY
         if (this.keys.length === 0) {
-            const singleKey = process.env.YOUTUBE_API_KEY?.replace(/^["']|["']$/g, "");
+            const singleKey = process.env.YOUTUBE_API_KEY?.trim().replace(/^['"]|['"]$/g, "");
             if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-")) {
                 this.keys = [singleKey];
             }
