@@ -4,6 +4,7 @@ import { Content, SearchOptions } from "../models/content.model";
 import { supabase } from "../utils/supabase";
 import AIGateway from "../ai/gateway";
 import config from "../config/index";
+import { QueryAnalyzer, QueryType } from "../utils/queryAnalyzer";
 
 /** Check if Supabase is actually configured (not placeholder values) */
 function isSupabaseConfigured(): boolean {
@@ -24,19 +25,20 @@ export class SearchService {
     query: string,
     options?: SearchOptions
   ): Promise<Content[]> {
-    const providers = options?.providers || ["youtube", "devto", "github", "reddit", "medium", "wikipedia", "website"];
+    // Use ALL providers by default for maximum results diversity
+    const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
     console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
 
-    const targetLimit = options?.limit || 100;
-    // Request a larger pool of results from providers to rank and filter effectively
-    const providerOptions = {
-      ...options,
-      limit: Math.max(targetLimit * 2, 200)
-    };
-
     // 1. Fetch raw content from providers in parallel
-    const rawResults = await providerManager.searchSelected(providers, query, providerOptions);
+    const rawResults = await providerManager.searchSelected(providers, query, options);
     console.debug("[SearchService.search] raw results fetched count=", rawResults.length);
+
+    // Log breakdown by source for debugging
+    const bySource: Record<string, number> = {};
+    rawResults.forEach(r => {
+      bySource[r.source] = (bySource[r.source] || 0) + 1;
+    });
+    console.debug("[SearchService.search] breakdown by source:", bySource);
 
     // 2. Deduplicate by URL
     const uniqueMap = new Map<string, Content>();
@@ -49,7 +51,23 @@ export class SearchService {
     console.debug("[SearchService.search] deduplicated count=", deduplicated.length);
 
     // 3. Rank results
-    const ranked = this.rankResults(deduplicated, query, options?.aiContext);
+    let goal: any = null;
+    if (options?.goalId && userId !== "anonymous" && isSupabaseConfigured()) {
+      try {
+        const { data } = await supabase
+          .from("goals")
+          .select("*")
+          .eq("id", options.goalId)
+          .eq("user_id", userId)
+          .single();
+        if (data) {
+          goal = data;
+        }
+      } catch (err: any) {
+        console.error("Failed to fetch goal for ranking:", err.message);
+      }
+    }
+    const ranked = this.rankResults(deduplicated, query, goal);
 
     // 4. Save search history & save new content records in DB asynchronously
     //    Only attempt if Supabase is properly configured
@@ -62,15 +80,7 @@ export class SearchService {
       );
     }
 
-    const limit = options?.limit || 70;
-
-    // 5. Source-diversity interleaving:
-    //    Ensures all active providers appear in the result set so YouTube (and others)
-    //    are never crowded out by pure relevance scoring.
-    //    Strategy: allocate at least `minPerSource` slots per active source,
-    //    then fill the rest with the top-ranked items globally.
-    const sliced = this.interleaveBySource(ranked, providers, limit);
-
+    const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
     if ((sliced || []).length === 0) {
       console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
     }
@@ -78,15 +88,52 @@ export class SearchService {
   }
 
   /**
-   * AI-enhanced search. Calls regular search, re-ranks using Gemini, and appends AI explanation.
+   * AI-enhanced search with smart query analysis.
+   * Detects specialized queries (GitHub users, YouTube channels, etc.)
+   * and applies intelligent provider selection and re-ranking.
    */
   static async searchAI(
     userId: string,
     query: string,
     options?: SearchOptions
   ): Promise<Content[]> {
-    const results = await this.search(userId, query, options);
-    if (results.length === 0) return [];
+    // 1. Analyze the query to detect specialized patterns
+    const queryAnalysis = QueryAnalyzer.analyze(query);
+    console.debug(
+      `[SearchService.searchAI] Query type: ${queryAnalysis.type}, Specialized: ${queryAnalysis.isSpecialized}`,
+      `Original: "${queryAnalysis.originalQuery}" → Enhanced: "${queryAnalysis.enhancedQuery}"`
+    );
+
+    // 2. Determine providers based on query analysis
+    // For generic queries, always use ALL providers for maximum diversity
+    let effectiveProviders = options?.providers;
+    if (!effectiveProviders || effectiveProviders.length === 0) {
+      if (queryAnalysis.isSpecialized) {
+        // Use specialized providers for specialized queries
+        effectiveProviders = queryAnalysis.suggestedProviders;
+        console.debug(`[SearchService.searchAI] Using specialized providers: ${effectiveProviders.join(",")}`);
+      } else {
+        // Use ALL providers for generic queries
+        effectiveProviders = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
+        console.debug(`[SearchService.searchAI] Using all providers for generic query`);
+      }
+    }
+
+    // 3. Use enhanced query for specialized searches
+    const searchQuery = queryAnalysis.isSpecialized 
+      ? queryAnalysis.enhancedQuery 
+      : query;
+
+    // 4. Perform search with optimized parameters
+    const results = await this.search(userId, searchQuery, {
+      ...options,
+      providers: effectiveProviders,
+    });
+
+    if (results.length === 0) {
+      console.warn(`[SearchService.searchAI] No results for query: "${query}"`);
+      return [];
+    }
 
     // Check if AI is configured
     const aiConfigured =
@@ -98,18 +145,26 @@ export class SearchService {
       return results;
     }
 
-    // Send top 10 results to AI for re-ranking and personalization explanation
+    // 5. Send top results to AI for re-ranking and personalization explanation
     const topResults = results.slice(0, 10);
 
-    // Build personalization context if the user provided additional instructions
+    // Build personalization context
     const personalizationBlock = options?.aiContext
       ? `\nThe user provided the following personalization context for their search:\n"${options.aiContext}"\nUse this context to better rank results and tailor your explanations to their specific needs, level, and preferences.\n`
       : '';
 
+    // Add specialized query guidance if applicable
+    const specializedGuidance = this.getSpecializedSearchGuidance(queryAnalysis);
+    const queryContext = specializedGuidance 
+      ? `\nNote: The user is looking for: ${specializedGuidance}\n`
+      : '';
+
     const prompt = `
-You are an expert tutor. Re-rank these content learning resources for the query: "${query}".
+You are an expert tutor and content curator. Re-rank these content learning resources for the query: "${queryAnalysis.originalQuery}".
+${queryContext}
 ${personalizationBlock}
-For each resource, explain in 1 sentence WHY it is highly relevant for a learner, and give a score from 1-10.
+For each resource, explain in 1-2 sentences WHY it is highly relevant for the user's search, and give a score from 1-10.
+Prioritize accuracy of results for the specific query pattern (e.g., for GitHub users, prioritize their actual profiles/repos; for YouTube channels, prioritize verified channels).
 
 Resources:
 ${topResults.map((r, i) => `[ID: ${r.id}] Title: ${r.title} | Source: ${r.source} | Description: ${r.description || "N/A"}`).join("\n")}
@@ -147,6 +202,8 @@ Schema:
               ...item.metadata,
               aiExplanation: aiData?.explanation || "Recommended based on query context.",
               aiScore: aiData?.score || 8.0,
+              queryType: queryAnalysis.type,
+              isSpecializedResult: queryAnalysis.isSpecialized,
             },
           };
         });
@@ -163,68 +220,6 @@ Schema:
     }
 
     return results;
-  }
-
-  /**
-   * Interleave results by source so every active provider is represented.
-   * - Each source gets at least min(minPerSource, available) slots.
-   * - Remaining slots filled by globally top-ranked items (dedup by URL).
-   */
-  private static interleaveBySource(
-    ranked: Content[],
-    providers: string[],
-    limit: number
-  ): Content[] {
-    // Group ranked items by source (preserving rank order within each group)
-    const bySource = new Map<string, Content[]>();
-    providers.forEach((p) => bySource.set(p.toLowerCase(), []));
-    ranked.forEach((item) => {
-      const key = item.source.toLowerCase();
-      if (bySource.has(key)) bySource.get(key)!.push(item);
-    });
-
-    const activeProviders = providers.filter((p) => (bySource.get(p.toLowerCase()) || []).length > 0);
-    if (activeProviders.length === 0) return ranked.slice(0, limit);
-
-    // Give each provider at least 3 guaranteed slots (or fewer if limit is small)
-    const minPerSource = Math.max(3, Math.floor(limit / (activeProviders.length * 2)));
-    const reserved = Math.min(minPerSource * activeProviders.length, Math.floor(limit * 0.6));
-
-    const usedUrls = new Set<string>();
-    const result: Content[] = [];
-
-    // Round-robin fill the reserved slots
-    const providerQueues = activeProviders.map((p) => [...(bySource.get(p.toLowerCase()) || [])]);
-    let added = 0;
-    let round = 0;
-    while (added < reserved) {
-      let anyLeft = false;
-      for (let i = 0; i < providerQueues.length && added < reserved; i++) {
-        const queue = providerQueues[i];
-        // Each provider gets minPerSource items in the reserved block
-        const alreadyFromSource = result.filter((r) => r.source.toLowerCase() === activeProviders[i].toLowerCase()).length;
-        if (alreadyFromSource >= minPerSource) continue;
-        if (queue[round] && !usedUrls.has(queue[round].url)) {
-          usedUrls.add(queue[round].url);
-          result.push(queue[round]);
-          added++;
-          anyLeft = true;
-        }
-      }
-      round++;
-      if (!anyLeft || round > 200) break;
-    }
-
-    // Fill remaining slots with top globally-ranked items not yet included
-    for (const item of ranked) {
-      if (result.length >= limit) break;
-      if (!usedUrls.has(item.url)) {
-        usedUrls.add(item.url);
-        result.push(item);
-      }
-    }
-
-    return result;
   }
 
   /**
@@ -317,66 +312,252 @@ Schema:
     };
   }
 
-  private static escapeRegExp(string: string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-  }
-
   private static matchToken(token: string, text: string): boolean {
-    // Exact word boundary match ignoring case.
-    const escaped = this.escapeRegExp(token);
-    // Allow plural/possessive variants gracefully with boundaries
-    const pattern = new RegExp(`\\b${escaped}(?:s|'s)?\\b`, 'i');
-    return pattern.test(text);
+    if (text.includes(token)) return true;
+    if (token.endsWith("s") && text.includes(token.slice(0, -1))) return true;
+    if (!token.endsWith("s") && text.includes(token + "s")) return true;
+    if (token.endsWith("'s") && text.includes(token.slice(0, -2))) return true;
+    return false;
   }
 
-  private static rankResults(items: Content[], query: string, aiContext?: string): Content[] {
-    const querySE = this.extractSeasonAndEpisode(query);
-    const normalizedCleanQuery = this.normalizeText(querySE.cleanText);
-    
-    const queryTokens = normalizedCleanQuery
+  /**
+   * Generate specialized guidance for AI re-ranking based on query type
+   */
+  private static getSpecializedSearchGuidance(queryAnalysis: any): string {
+    switch (queryAnalysis.type) {
+      case "github_user":
+        return `a specific GitHub user profile (${queryAnalysis.metadata?.username}), including their repositories, contributions, and public projects`;
+      case "github_repo":
+        return `relevant GitHub repositories matching the criteria, with emphasis on starred/popular repos and those with good documentation`;
+      case "youtube_channel":
+        return `a specific YouTube channel (@${queryAnalysis.metadata?.channelHandle}), including its videos, playlists, and channel information`;
+      case "youtube_video":
+        return `YouTube videos matching the search query, with preference for tutorial-style or comprehensive content`;
+      case "twitter_profile":
+        return `a specific Twitter/X profile (${queryAnalysis.metadata?.username}), including tweets, threads, and profile information`;
+      default:
+        return "";
+    }
+  }
+
+  /**
+   * Improved ranking system with semantic understanding and provider balance
+   * Focuses on relevance, context, and diversity instead of bare text matching
+   */
+  private static rankResults(items: Content[], query: string, goal?: any): Content[] {
+    const normalizedQuery = this.normalizeText(query).toLowerCase();
+    const queryTokens = normalizedQuery
       .split(/\s+/)
       .filter(token => token.length >= 2 || /^\d+$/.test(token));
 
-    const contextTokens = aiContext 
-      ? this.normalizeText(aiContext).split(/\s+/).filter(token => token.length >= 3)
-      : [];
+    // Score each item
+    const scored = items.map((item, index) => {
+      let score = 0;
+      const normalizedTitle = this.normalizeText(item.title).toLowerCase();
+      const normalizedDesc = this.normalizeText(item.description || "").toLowerCase();
+      const normalizedTags = (item.tags || []).map(t => t.toLowerCase());
 
-    return items
-      .map((item) => {
-        let score = 0;
-        const normalizedTitle = this.normalizeText(item.title);
-        const normalizedDesc = this.normalizeText(item.description || "");
-        const allText = `${normalizedTitle} ${normalizedDesc} ${item.tags.join(" ")}`.toLowerCase();
+      // ===== SEMANTIC RELEVANCE (Primary) =====
+      
+      // 1. Title relevance - stronger weight
+      const titleRelevance = this.calculateSemanticRelevance(normalizedQuery, normalizedTitle);
+      score += titleRelevance * 80;
 
-        // 1. Exact query match in title (Highest boost)
-        if (normalizedTitle.includes(normalizedCleanQuery)) {
-          score += 200;
-        } else if (allText.includes(normalizedCleanQuery)) {
-          score += 100;
+      // 2. Description relevance - moderate weight
+      const descRelevance = this.calculateSemanticRelevance(normalizedQuery, normalizedDesc);
+      score += descRelevance * 40;
+
+      // 3. Tags/keywords relevance - lower weight
+      const tagsRelevance = Math.max(0, ...normalizedTags.map(tag => 
+        this.calculateSemanticRelevance(normalizedQuery, tag)
+      ));
+      score += tagsRelevance * 20;
+
+      // ===== CONTENT TYPE BONUS (Secondary) =====
+      // Different content types are valuable - don't penalize variety
+      const typeBonus = this.getContentTypeBonus(item.type, query);
+      score += typeBonus;
+
+      // ===== POPULARITY SIGNAL (Tertiary - small contribution) =====
+      // Higher view counts suggest quality, but don't dominate
+      if (item.viewCount) {
+        const viewBonus = Math.min(Math.log(item.viewCount) * 5, 15);
+        score += viewBonus;
+      }
+
+      // ===== PROVIDER DIVERSITY BONUS (Secondary) =====
+      // Ensure variety: boost underrepresented sources slightly
+      const sourceBonus = this.getSourceDiversityBonus(item.source, items);
+      score += sourceBonus;
+
+      // ===== GOAL ALIGNMENT (if applicable) =====
+      if (goal) {
+        const goalRelevance = this.calculateSemanticRelevance(
+          this.normalizeText(goal.title).toLowerCase(),
+          normalizedTitle + " " + normalizedDesc
+        );
+        score += goalRelevance * 30;
+      }
+
+      // ===== ORIGINAL RANKING AS TIE-BREAKER =====
+      // API returns in order of relevance - use as tie-breaker only
+      score += Math.max(0, 5 - index * 0.1);
+
+      return { item, score };
+    });
+
+    // Sort by score descending
+    scored.sort((a, b) => b.score - a.score);
+
+    // Return with diversity: spread providers throughout results
+    return this.balanceProviderDiversity(scored.map(s => s.item));
+  }
+
+  /**
+   * Calculate semantic relevance between query and text
+   * Returns 0-1 score
+   */
+  private static calculateSemanticRelevance(query: string, text: string): number {
+    if (!query || !text) return 0;
+
+    const queryTokens = query.split(/\s+/).filter(t => t.length >= 2);
+    const textTokens = text.split(/\s+/).filter(t => t.length >= 2);
+
+    if (queryTokens.length === 0 || textTokens.length === 0) return 0;
+
+    // Count matching tokens
+    let matches = 0;
+    queryTokens.forEach(qt => {
+      textTokens.forEach(tt => {
+        // Exact match
+        if (qt === tt) {
+          matches += 1.0;
+        } 
+        // Partial match (prefix/suffix)
+        else if (tt.includes(qt) || qt.includes(tt)) {
+          matches += 0.6;
         }
-
-        // 2. Query token coverage
-        let tokenMatches = 0;
-        queryTokens.forEach(token => {
-          if (this.matchToken(token, allText)) tokenMatches++;
-        });
-        if (queryTokens.length > 0) {
-          score += (tokenMatches / queryTokens.length) * 100;
+        // Similar (edit distance-like)
+        else if (this.levenshteinDistance(qt, tt) <= 2) {
+          matches += 0.3;
         }
+      });
+    });
 
-        // 3. Goal/Context semantic relevance
-        if (contextTokens.length > 0) {
-          let contextMatches = 0;
-          contextTokens.forEach(token => {
-            if (this.matchToken(token, allText)) contextMatches++;
-          });
-          score += (contextMatches / contextTokens.length) * 150;
+    // Normalize to 0-1
+    const maxPossibleMatches = queryTokens.length;
+    return Math.min(matches / maxPossibleMatches, 1.0);
+  }
+
+  /**
+   * Simple Levenshtein distance for fuzzy matching
+   */
+  private static levenshteinDistance(a: string, b: string): number {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const matrix: number[][] = Array(b.length + 1)
+      .fill(null)
+      .map(() => Array(a.length + 1).fill(0));
+
+    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+
+    for (let j = 1; j <= b.length; j++) {
+      for (let i = 1; i <= a.length; i++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + cost
+        );
+      }
+    }
+
+    return matrix[b.length][a.length];
+  }
+
+  /**
+   * Get bonus score for content type based on query context
+   */
+  private static getContentTypeBonus(type: string, query: string): number {
+    const q = query.toLowerCase();
+
+    // Video queries benefit from video content
+    if ((q.includes("video") || q.includes("tutorial") || q.includes("how")) && 
+        (type === "video" || type === "channel")) {
+      return 15;
+    }
+
+    // Code queries benefit from repos
+    if ((q.includes("code") || q.includes("repo") || q.includes("project")) && 
+        (type === "repo" || type === "profile")) {
+      return 15;
+    }
+
+    // Article/learning queries benefit from articles
+    if ((q.includes("learn") || q.includes("guide") || q.includes("tutorial")) && 
+        (type === "article" || type === "post")) {
+      return 10;
+    }
+
+    // No penalty for any type - diversity is good
+    return 5;
+  }
+
+  /**
+   * Boost underrepresented sources to ensure diversity
+   */
+  private static getSourceDiversityBonus(source: string, allItems: Content[]): number {
+    const sourceCounts = allItems.reduce((acc, item) => {
+      acc[item.source] = (acc[item.source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const currentSourceCount = sourceCounts[source] || 1;
+    const avgCount = allItems.length / Object.keys(sourceCounts).length;
+
+    // If this source is underrepresented, boost it slightly
+    if (currentSourceCount < avgCount) {
+      return 8;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Balance provider diversity in final results
+   * Ensures we show good content from all providers, not dominated by one
+   */
+  private static balanceProviderDiversity(items: Content[]): Content[] {
+    if (items.length <= 10) return items;
+
+    // For small result sets, return as-is
+    // For large sets, interleave providers
+
+    const bySource: Record<string, Content[]> = {};
+    items.forEach(item => {
+      if (!bySource[item.source]) bySource[item.source] = [];
+      bySource[item.source].push(item);
+    });
+
+    // If we have only one source, return as-is
+    const sources = Object.keys(bySource);
+    if (sources.length <= 1) return items;
+
+    // Interleave: take one from each source in round-robin fashion
+    const balanced: Content[] = [];
+    let maxLength = Math.max(...sources.map(s => bySource[s].length));
+
+    for (let i = 0; i < maxLength; i++) {
+      sources.forEach(source => {
+        if (bySource[source][i]) {
+          balanced.push(bySource[source][i]);
         }
+      });
+    }
 
-        return { item, score };
-      })
-      .sort((a, b) => b.score - a.score)
-      .map((x) => x.item);
+    return balanced;
   }
 
   /**
