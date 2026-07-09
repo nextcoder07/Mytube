@@ -28,6 +28,9 @@ export default function GoalsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [priority1, setPriority1] = useState("");
+  const [priority2, setPriority2] = useState("");
+  const [priority3, setPriority3] = useState("");
   const [category, setCategory] = useState("General");
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("beginner");
   const [targetDate, setTargetDate] = useState("");
@@ -37,10 +40,17 @@ export default function GoalsPage() {
     e.preventDefault();
     if (!title.trim()) return;
 
+    const serializedDescription = JSON.stringify({
+      describe: description,
+      priority1,
+      priority2,
+      priority3,
+    });
+
     try {
       await createGoal({
         title,
-        description,
+        description: serializedDescription,
         category,
         difficulty,
         targetDate: targetDate || undefined,
@@ -48,6 +58,9 @@ export default function GoalsPage() {
       setIsModalOpen(false);
       setTitle("");
       setDescription("");
+      setPriority1("");
+      setPriority2("");
+      setPriority3("");
       setCategory("General");
       setDifficulty("beginner");
       setTargetDate("");
@@ -107,20 +120,47 @@ export default function GoalsPage() {
           ) : (
             goals.map((goal) => {
               const matchedRoadmap = roadmaps.find((r) => r.goalId === goal.id);
+              
+              // Deserialize description and priorities
+              let parsedDesc = goal.description || "";
+              const priorities: string[] = [];
+              try {
+                const json = JSON.parse(goal.description || "{}");
+                parsedDesc = json.describe || "";
+                if (json.priority1) priorities.push(json.priority1);
+                if (json.priority2) priorities.push(json.priority2);
+                if (json.priority3) priorities.push(json.priority3);
+              } catch {
+                // not JSON, fallback to raw description
+              }
+
+              const isActive = activeRoadmap === goal.id;
+
               return (
                 <div
                   key={goal.id}
                   className={`glow-card p-5 cursor-pointer transition-all duration-300 relative border ${
-                    activeRoadmap === goal.id
+                    isActive
                       ? "border-violet-500 bg-violet-950/10 shadow-lg shadow-violet-500/10"
                       : "border-gray-800 bg-gray-900/30"
                   }`}
-                  onClick={() => setActiveRoadmap(goal.id)}
+                  onClick={() => {
+                    setActiveRoadmap(goal.id);
+                    const contextText = `Goal: ${goal.title}. Describe: ${parsedDesc}. Priorities: 1. ${priorities[0] || ""}, 2. ${priorities[1] || ""}, 3. ${priorities[2] || ""}`;
+                    localStorage.setItem("mytube_ai_context", contextText);
+                  }}
                 >
-                  <div className="flex justify-between items-start gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[10px] uppercase font-bold tracking-wider">
-                      {goal.category}
-                    </span>
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex gap-2 items-center">
+                      <span className="px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[10px] uppercase font-bold tracking-wider">
+                        {goal.category}
+                      </span>
+                      {isActive && (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] uppercase font-bold tracking-wider animate-pulse">
+                          Active Context
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -132,14 +172,31 @@ export default function GoalsPage() {
                       <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
+                  
                   <h3 className="text-base font-bold text-white mt-2 group-hover:text-violet-400">
                     {goal.title}
                   </h3>
-                  {goal.description && (
-                    <p className="text-xs text-gray-400 line-clamp-2 mt-1 leading-normal">
-                      {goal.description}
-                    </p>
-                  )}
+                  
+                  <div className="mt-2 space-y-2">
+                    {parsedDesc && (
+                      <p className="text-xs text-gray-400 line-clamp-2 leading-normal">
+                        {parsedDesc}
+                      </p>
+                    )}
+                    {priorities.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Top Priorities:</span>
+                        <div className="flex flex-col gap-1 text-[11px] text-gray-300">
+                          {priorities.map((p, idx) => (
+                            <div key={idx} className="flex items-center gap-1">
+                              <span className="text-violet-400 font-bold">{idx + 1}.</span>
+                              <span className="truncate">{p}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-4 text-[11px] text-gray-500 mt-4 pt-3 border-t border-gray-900">
                     <span className="capitalize">⭐ {goal.difficulty}</span>
@@ -185,11 +242,37 @@ export default function GoalsPage() {
 
               if (!goal) return null;
 
+              // Deserialize description and priorities
+              let parsedDesc = goal.description || "";
+              const priorities: string[] = [];
+              try {
+                const json = JSON.parse(goal.description || "{}");
+                parsedDesc = json.describe || "";
+                if (json.priority1) priorities.push(json.priority1);
+                if (json.priority2) priorities.push(json.priority2);
+                if (json.priority3) priorities.push(json.priority3);
+              } catch {
+                // not JSON, fallback to raw description
+              }
+
               return (
                 <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6 space-y-6">
-                  <div>
+                  <div className="space-y-3">
                     <h2 className="text-xl font-bold text-white">{goal.title}</h2>
-                    <p className="text-sm text-gray-400 mt-1 leading-relaxed">{goal.description || "No description provided."}</p>
+                    {parsedDesc && <p className="text-sm text-gray-400 leading-relaxed">{parsedDesc}</p>}
+                    {priorities.length > 0 && (
+                      <div className="p-4 bg-gray-950/40 border border-gray-800 rounded-xl space-y-2">
+                        <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider">Learning Priorities</h4>
+                        <ul className="space-y-1.5 text-xs text-gray-300">
+                          {priorities.map((p, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-violet-400 font-bold">{idx + 1}.</span>
+                              <span>{p}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {roadmap ? (
@@ -283,13 +366,52 @@ export default function GoalsPage() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Description
+                  Describe Goal
                 </label>
                 <textarea
                   placeholder="Describe what you want to learn or achieve..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
+                  rows={2}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Priority 1
+                </label>
+                <input
+                  type="text"
+                  placeholder="Highest priority concept (e.g., Hooks, Database design)"
+                  value={priority1}
+                  onChange={(e) => setPriority1(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Priority 2
+                </label>
+                <input
+                  type="text"
+                  placeholder="Second priority concept (e.g., Styling, Auth)"
+                  value={priority2}
+                  onChange={(e) => setPriority2(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Priority 3
+                </label>
+                <input
+                  type="text"
+                  placeholder="Third priority concept (e.g., Deployments, CI/CD)"
+                  value={priority3}
+                  onChange={(e) => setPriority3(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
                 />
               </div>

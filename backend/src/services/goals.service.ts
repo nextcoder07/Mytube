@@ -108,8 +108,16 @@ export class GoalsService {
     const timePerWeek = options?.timePerWeek || 5; // default 5 hours/week
 
     // 3. Compile prompt
+    let goalDescription = goal.description || "";
+    try {
+      const json = JSON.parse(goal.description);
+      goalDescription = `${json.describe || ""}. Priorities: 1. ${json.priority1 || ""}, 2. ${json.priority2 || ""}, 3. ${json.priority3 || ""}`;
+    } catch (e) {
+      // not JSON, keep as is
+    }
+
     const prompt = buildPrompt("roadmap", {
-      goal: `${goal.title}. ${goal.description || ""}`,
+      goal: `${goal.title}. ${goalDescription}`,
       level: difficulty,
       timePerWeek: timePerWeek.toString(),
       targetDate: goal.target_date || "3 months from now",
