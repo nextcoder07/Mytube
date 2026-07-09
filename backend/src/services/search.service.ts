@@ -1,6 +1,7 @@
 // src/services/search.service.ts
 import providerManager from "../providers";
 import { Content, SearchOptions } from "../models/content.model";
+import { searchCache } from "../cache/search-cache";
 import { supabase } from "../utils/supabase";
 import AIGateway from "../ai/gateway";
 import config from "../config/index";
@@ -29,8 +30,35 @@ export class SearchService {
     const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
     console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
 
-    // 1. Fetch raw content from providers in parallel
-    const rawResults = await providerManager.searchSelected(providers, query, options);
+    const visibleLimit = options?.limit || 70;
+    const batchSize = searchCache.getBatchSize();
+    const fetchBatchSize = searchCache.getFetchSize();
+
+    const providerPromises = providers.map(async (source) => {
+      const cachedItems = searchCache.getAll(query, source);
+      const cachedLength = cachedItems?.length ?? 0;
+      const hasSufficientCache = cachedLength >= visibleLimit;
+
+      if (!hasSufficientCache) {
+        const additionalFetch = Math.max(fetchBatchSize, visibleLimit - cachedLength, batchSize);
+        const providerResults = await providerManager.searchProvider(source, query, {
+          ...options,
+          providers: [source],
+          limit: additionalFetch,
+        });
+
+        if (cachedItems) {
+          searchCache.append(query, providerResults, source);
+        } else {
+          searchCache.set(query, providerResults, source);
+        }
+      }
+
+      return searchCache.getTop(query, Math.max(batchSize, visibleLimit), source) || [];
+    });
+
+    const sourceResultsArray = await Promise.all(providerPromises);
+    const rawResults = sourceResultsArray.flat();
     console.debug("[SearchService.search] raw results fetched count=", rawResults.length);
 
     // Log breakdown by source for debugging

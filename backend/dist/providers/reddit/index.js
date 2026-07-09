@@ -4,7 +4,11 @@ exports.RedditProvider = void 0;
 class RedditProvider {
     name = "reddit";
     async search(query, options) {
-        const limit = options?.limit || 50; // Increased from 25 to 50
+        if (!process.env.REDDIT_CLIENT_ID || !process.env.REDDIT_CLIENT_SECRET) {
+            console.warn("[Reddit] Reddit API credentials are not configured. Reddit search is disabled.");
+            return [];
+        }
+        const limit = Math.max(options?.limit || 70, 70);
         try {
             const totalToFetch = limit;
             let allChildren = [];
@@ -66,7 +70,8 @@ class RedditProvider {
     /**
      * Fallback: Use DuckDuckGo to search Reddit content
      */
-    async searchViaDDG(query, limit) {
+    async searchViaDDG(query, limit = 70) {
+        limit = Math.max(limit, 70);
         const results = [];
         try {
             const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query + " site:reddit.com")}`;

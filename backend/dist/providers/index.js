@@ -57,6 +57,23 @@ class ProviderManager {
         });
         return mergedResults;
     }
+    getProvider(name) {
+        return this.providers.get(name.toLowerCase());
+    }
+    async searchProvider(providerName, query, options) {
+        const provider = this.getProvider(providerName);
+        if (!provider) {
+            console.warn(`Provider ${providerName} not registered.`);
+            return [];
+        }
+        try {
+            return await provider.search(query, options);
+        }
+        catch (err) {
+            console.error(`Error searching provider ${providerName}:`, err);
+            return [];
+        }
+    }
 }
 exports.ProviderManager = ProviderManager;
 exports.providerManager = new ProviderManager();

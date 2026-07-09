@@ -36,4 +36,33 @@ export interface SearchOptions {
   goalId?: string;
   // Pagination support
   after?: string;
+  // Cache control
+  useCache?: boolean;
+}
+
+export interface ProviderSearchResult {
+  items: Content[];
+  nextPageToken?: string;
+  after?: string;
+  page?: number;
+  startIndex?: number;
+  hasMore?: boolean;
+}
+
+/**
+ * Paginated search response with caching metadata
+ */
+export interface PaginatedSearchResponse {
+  data: Content[];
+  pagination: {
+    currentPage: number;
+    resultsPerPage: number;
+    totalResults: number;
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+  cache: {
+    isCached: boolean;
+    source?: string;
+  };
 }

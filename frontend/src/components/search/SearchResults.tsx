@@ -240,7 +240,7 @@ export default function SearchResults({
             ) : (
               <>
                 <ArrowPathIcon className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                Load 100 More Results
+                Load More Results
               </>
             )}
           </button>

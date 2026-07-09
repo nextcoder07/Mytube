@@ -68,6 +68,29 @@ export class ProviderManager {
 
     return mergedResults;
   }
+
+  getProvider(name: string): ContentProvider | undefined {
+    return this.providers.get(name.toLowerCase());
+  }
+
+  async searchProvider(
+    providerName: string,
+    query: string,
+    options?: SearchOptions
+  ): Promise<Content[]> {
+    const provider = this.getProvider(providerName);
+    if (!provider) {
+      console.warn(`Provider ${providerName} not registered.`);
+      return [];
+    }
+
+    try {
+      return await provider.search(query, options);
+    } catch (err) {
+      console.error(`Error searching provider ${providerName}:`, err);
+      return [];
+    }
+  }
 }
 
 export const providerManager = new ProviderManager();
