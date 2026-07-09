@@ -83,7 +83,7 @@ export function useSearch() {
 
   const { data, isLoading, isFetching, error } = useQuery(queryOptions);
 
-
+  const responseMeta = (data as any)?.meta ?? null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Content[] = (data as any)?.data ?? [];
 
@@ -145,6 +145,7 @@ export function useSearch() {
     isLoading, 
     isFetching, 
     error, 
+    responseMeta, 
     search, 
     loadMore, 
     loadPrevious, 

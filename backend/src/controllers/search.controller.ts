@@ -1,6 +1,7 @@
 // src/controllers/search.controller.ts
 import { Request, Response, NextFunction } from "express";
 import SearchService from "../services/search.service";
+import providerManager from "../providers";
 import { success } from "../utils/response";
 import { HttpError } from "../utils/errors";
 
@@ -37,8 +38,9 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
       videoCategoryId,
       relevanceLanguage,
     });
-      console.debug("[search.controller] returning results count=", Array.isArray(results) ? results.length : 0);
-    res.status(200).json(success(results, "Search completed"));
+    const youtubeStatus = providerManager.getProvider("youtube")?.getStatus?.();
+    console.debug("[search.controller] returning results count=", Array.isArray(results) ? results.length : 0);
+    res.status(200).json(success(results, "Search completed", { youtubeStatus }));
   } catch (err: any) {
     next(err);
   }
@@ -74,7 +76,8 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
       aiContext: aiContext || undefined,
     };
     const results = await SearchService.searchAI(userId, query, { ...options, providers });
-    res.status(200).json(success(results, "AI Search completed"));
+    const youtubeStatus = providerManager.getProvider("youtube")?.getStatus?.();
+    res.status(200).json(success(results, "AI Search completed", { youtubeStatus }));
   } catch (err: any) {
     next(err);
   }

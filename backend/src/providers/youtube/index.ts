@@ -91,8 +91,17 @@ const keyManager = new YouTubeKeyManager();
 
 export class YouTubeProvider implements ContentProvider {
   name = "youtube";
+  private quotaExhausted = false;
+
+  getStatus() {
+    return {
+      limitReached: this.quotaExhausted,
+      message: this.quotaExhausted ? "YouTube API quota exhausted for all configured keys." : undefined,
+    };
+  }
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
+    this.quotaExhausted = false;
     // Detect if searching for a YouTube channel
     const isChannelSearch = this.isChannelQuery(query);
     
@@ -117,7 +126,10 @@ export class YouTubeProvider implements ContentProvider {
       let activeKey = keyManager.getKey();
 
       if (!activeKey) {
-        console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
+        this.quotaExhausted = keyManager.isAllExhausted();
+        if (this.quotaExhausted) {
+          console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
+        }
         return await this.searchViaDDG(query, Math.max(options?.limit || 70, 70));
       }
 
@@ -138,6 +150,7 @@ export class YouTubeProvider implements ContentProvider {
       // Fetch multiple pages if needed
       while (fetched < effectiveTotal) {
         if (!activeKey) {
+          this.quotaExhausted = keyManager.isAllExhausted();
           console.warn("All YouTube API keys exhausted mid-search. Returning partial results.");
           break;
         }
@@ -213,6 +226,7 @@ export class YouTubeProvider implements ContentProvider {
         if (detailsRes.status === 429 || detailsRes.status === 403) {
           keyManager.markExhausted(activeKey);
           activeKey = keyManager.getKey();
+          this.quotaExhausted = keyManager.isAllExhausted();
           if (activeKey) {
             i -= 50; // retry this batch with new key
           }

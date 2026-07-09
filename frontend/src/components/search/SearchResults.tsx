@@ -15,6 +15,7 @@ interface Props {
   onLoadPrevious?: () => void;
   hasMore?: boolean;
   limit?: number;
+  responseMeta?: any;
 }
 
 type SortByOption = 'relevance' | 'date' | 'popularity';
@@ -28,6 +29,7 @@ export default function SearchResults({
   onLoadPrevious,
   hasMore,
   limit,
+  responseMeta,
 }: Props) {
   const [activeSourceFilter, setActiveSourceFilter] = useState<string>('all');
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>('all');
@@ -207,9 +209,13 @@ export default function SearchResults({
         )}
       </div>
 
-      <ContentGrid items={processedResults} />
+      {responseMeta?.youtubeStatus?.limitReached && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          YouTube quota has been exhausted for all configured keys. Some results may be incomplete.
+        </div>
+      )}
 
-      {/* Pagination Buttons */}
+      <ContentGrid items={processedResults} />
       <div className="flex justify-center gap-4 mt-8 mb-4">
         {onLoadPrevious && limit && limit > 70 && (
           <button

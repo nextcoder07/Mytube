@@ -14,6 +14,7 @@ export default function SearchPage() {
     results, 
     isLoading, 
     isFetching, 
+    responseMeta,
     search, 
     loadMore, 
     loadPrevious, 
@@ -127,6 +128,7 @@ export default function SearchPage() {
         onLoadPrevious={loadPrevious}
         hasMore={hasMore}
         limit={limit}
+        responseMeta={responseMeta}
       />
     </main>
   );
