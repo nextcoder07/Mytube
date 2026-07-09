@@ -8,5 +8,7 @@ export interface Goal {
   difficulty?: "beginner" | "intermediate" | "advanced";
   targetDate?: string;
   status: "active" | "completed" | "paused";
+  /** Whether this goal should influence search result ranking */
+  useInSearch: boolean;
   createdAt: Date;
 }

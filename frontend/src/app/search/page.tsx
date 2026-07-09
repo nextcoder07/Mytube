@@ -4,7 +4,10 @@ import SearchBar from '../../components/search/SearchBar';
 import SearchResults from '../../components/search/SearchResults';
 import SearchFilters from '../../components/search/SearchFilters';
 import type { SearchFiltersState } from '../../types/content';
+import { useRouter } from 'next/navigation';
 import { useSearch } from '../../hooks/useSearch';
+
+
 
 export default function SearchPage() {
   const { 
@@ -20,6 +23,7 @@ export default function SearchPage() {
     currentQuery,
     limit 
   } = useSearch();
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [aiMode, setAiMode] = useState(false);
@@ -74,18 +78,28 @@ export default function SearchPage() {
   return (
     <main className="flex-1 p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Search</h1>
-          <p className="text-gray-400 mt-1">Search across YouTube, GitHub, Reddit &amp; Medium.</p>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Search</h1>
+            <p className="text-gray-400 mt-1">Search across YouTube, GitHub, Reddit &amp; Medium.</p>
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white font-semibold transition-colors bg-gray-800/30 hover:bg-gray-800/50 border border-gray-700 px-4 py-2 rounded-xl"
+            >
+              ← Home
+            </button>
+            {hasHistory && (
+              <button
+                onClick={goBackQuery}
+                className="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 font-semibold transition-colors bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 px-4 py-2 rounded-xl shadow-sm"
+              >
+                ← Back to Previous Search
+              </button>
+            )}
+          </div>
         </div>
-        {hasHistory && (
-          <button
-            onClick={goBackQuery}
-            className="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 font-semibold transition-colors bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 px-4 py-2 rounded-xl shadow-sm"
-          >
-            ← Back to Previous Search
-          </button>
-        )}
       </div>
 
       <SearchBar

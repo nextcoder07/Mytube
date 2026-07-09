@@ -25,6 +25,7 @@ export class GoalsService {
       category?: string;
       difficulty?: "beginner" | "intermediate" | "advanced";
       targetDate?: string;
+      useInSearch?: boolean;
     }
   ): Promise<Goal> {
     const { data, error } = await supabase
@@ -37,6 +38,7 @@ export class GoalsService {
         difficulty: goalData.difficulty || "beginner",
         target_date: goalData.targetDate,
         status: "active",
+        use_in_search: goalData.useInSearch !== undefined ? goalData.useInSearch : true,
       })
       .select()
       .single();
@@ -57,6 +59,7 @@ export class GoalsService {
     if (updates.difficulty !== undefined) dbUpdates.difficulty = updates.difficulty;
     if (updates.targetDate !== undefined) dbUpdates.target_date = updates.targetDate;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if ((updates as any).useInSearch !== undefined) dbUpdates.use_in_search = (updates as any).useInSearch;
 
     const { data, error } = await supabase
       .from("goals")
@@ -186,6 +189,43 @@ export class GoalsService {
 
     if (error) throw error;
     return data;
+  }
+
+  /**
+   * Build a context string from all the user's goals that have useInSearch enabled.
+   * This string is injected into the search ranker to boost goal-relevant results.
+   */
+  static async getActiveGoalContext(userId: string): Promise<string> {
+    const { data, error } = await supabase
+      .from("goals")
+      .select("title, description, category")
+      .eq("user_id", userId)
+      .eq("use_in_search", true)
+      .eq("status", "active");
+
+    if (error || !data || data.length === 0) return "";
+
+    // Build a compact context string from all matching goals
+    return data
+      .map((g: any) => {
+        let text = `Goal: ${g.title}`;
+        if (g.description) {
+          try {
+            const json = JSON.parse(g.description);
+            const parts: string[] = [];
+            if (json.describe) parts.push(json.describe);
+            if (json.priority1) parts.push(`Priority 1: ${json.priority1}`);
+            if (json.priority2) parts.push(`Priority 2: ${json.priority2}`);
+            if (json.priority3) parts.push(`Priority 3: ${json.priority3}`);
+            text += `. ${parts.join(". ")}`;
+          } catch {
+            text += `. ${g.description}`;
+          }
+        }
+        if (g.category) text += `. Category: ${g.category}`;
+        return text;
+      })
+      .join(" | ");
   }
 }
 

@@ -70,7 +70,8 @@ export default function SearchResults({ results, isLoading, isFetching, query, o
     return list;
   }, [results, activeSourceFilter, activeTypeFilter, sortBy]);
 
-  if (isLoading && results.length === 0) {
+  // Show a loading indicator while the initial fetch is in progress (including fetching state when no results yet)
+  if ((isLoading || (isFetching && results.length === 0)) && results.length === 0) {
     return (
       <div className="flex justify-center items-center py-20">
         <LoadingSpinner />

@@ -111,6 +111,15 @@ export function useSearch() {
     setParams(previous);
   }, [queryHistory, setHasMore, setParams, setQueryHistory]);
 
+  // Reset the search to initial empty state
+  const resetSearch = useCallback(() => {
+    // Clear history and results, reset pagination
+    setQueryHistory([]);
+    prevResultCountRef.current = 0;
+    setHasMore(false);
+    setParams({ q: '', limit: BATCH_SIZE });
+  }, [setQueryHistory, setHasMore, setParams]);
+
   return { 
     results, 
     isLoading, 
@@ -120,6 +129,7 @@ export function useSearch() {
     loadMore, 
     loadPrevious, 
     goBackQuery, 
+    resetSearch,
     hasMore, 
     hasHistory: queryHistory.length > 0,
     currentQuery: params?.q || '',
