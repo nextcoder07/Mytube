@@ -107,8 +107,11 @@ export interface Goal {
   description?: string;
   category: string;
   difficulty: "beginner" | "intermediate" | "advanced";
-  status: "active" | "completed" | "paused";
   targetDate?: string;
+  priority1?: string;
+  priority2?: string;
+  priority3?: string;
+  status: "active" | "completed" | "paused";
   createdAt: string;
   updatedAt: string;
 }

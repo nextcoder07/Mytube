@@ -29,6 +29,9 @@ export function useGoals() {
       category?: string;
       difficulty?: "beginner" | "intermediate" | "advanced";
       targetDate?: string;
+      priority1?: string;
+      priority2?: string;
+      priority3?: string;
     }) => {
       const res = await api.post("/goals", newGoal);
       return res.data?.data;

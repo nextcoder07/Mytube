@@ -25,6 +25,9 @@ export class GoalsService {
       category?: string;
       difficulty?: "beginner" | "intermediate" | "advanced";
       targetDate?: string;
+      priority1?: string;
+      priority2?: string;
+      priority3?: string;
       useInSearch?: boolean;
     }
   ): Promise<Goal> {
@@ -37,6 +40,9 @@ export class GoalsService {
         category: goalData.category || "General",
         difficulty: goalData.difficulty || "beginner",
         target_date: goalData.targetDate,
+        priority1: goalData.priority1,
+        priority2: goalData.priority2,
+        priority3: goalData.priority3,
         status: "active",
         use_in_search: goalData.useInSearch !== undefined ? goalData.useInSearch : true,
       })
@@ -58,7 +64,9 @@ export class GoalsService {
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.difficulty !== undefined) dbUpdates.difficulty = updates.difficulty;
     if (updates.targetDate !== undefined) dbUpdates.target_date = updates.targetDate;
-    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if ((updates as any).priority1 !== undefined) dbUpdates.priority1 = (updates as any).priority1;
+    if ((updates as any).priority2 !== undefined) dbUpdates.priority2 = (updates as any).priority2;
+    if ((updates as any).priority3 !== undefined) dbUpdates.priority3 = (updates as any).priority3;
     if ((updates as any).useInSearch !== undefined) dbUpdates.use_in_search = (updates as any).useInSearch;
 
     const { data, error } = await supabase

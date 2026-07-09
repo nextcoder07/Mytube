@@ -48,20 +48,16 @@ export default function GoalsPage() {
       return;
     }
 
-    const serializedDescription = JSON.stringify({
-      describe: description,
-      priority1,
-      priority2,
-      priority3,
-    });
-
     try {
       await createGoal({
         title,
-        description: serializedDescription,
+        description,
         category,
         difficulty,
         targetDate: targetDate || undefined,
+        priority1: priority1 || undefined,
+        priority2: priority2 || undefined,
+        priority3: priority3 || undefined,
       });
       setFormSuccess("Goal added successfully!");
       setTitle("");
@@ -134,17 +130,25 @@ export default function GoalsPage() {
             goals.map((goal) => {
               const matchedRoadmap = roadmaps.find((r) => r.goalId === goal.id);
               
-              // Deserialize description and priorities
+              // Prefer explicit priority columns; fall back to JSON blob in description
               let parsedDesc = goal.description || "";
               const priorities: string[] = [];
-              try {
-                const json = JSON.parse(goal.description || "{}");
-                parsedDesc = json.describe || "";
-                if (json.priority1) priorities.push(json.priority1);
-                if (json.priority2) priorities.push(json.priority2);
-                if (json.priority3) priorities.push(json.priority3);
-              } catch {
-                // not JSON, fallback to raw description
+
+              if (goal.priority1) priorities.push(goal.priority1);
+              if (goal.priority2) priorities.push(goal.priority2);
+              if (goal.priority3) priorities.push(goal.priority3);
+
+              // If no explicit priorities found, attempt to parse old JSON-serialized description
+              if (priorities.length === 0 && goal.description) {
+                try {
+                  const json = JSON.parse(goal.description || "{}");
+                  parsedDesc = json.describe || parsedDesc;
+                  if (json.priority1) priorities.push(json.priority1);
+                  if (json.priority2) priorities.push(json.priority2);
+                  if (json.priority3) priorities.push(json.priority3);
+                } catch {
+                  // not JSON, keep raw description
+                }
               }
 
               const isActive = activeRoadmap === goal.id;
@@ -255,17 +259,24 @@ export default function GoalsPage() {
 
               if (!goal) return null;
 
-              // Deserialize description and priorities
+              // Prefer explicit priority columns; fall back to JSON blob in description
               let parsedDesc = goal.description || "";
               const priorities: string[] = [];
-              try {
-                const json = JSON.parse(goal.description || "{}");
-                parsedDesc = json.describe || "";
-                if (json.priority1) priorities.push(json.priority1);
-                if (json.priority2) priorities.push(json.priority2);
-                if (json.priority3) priorities.push(json.priority3);
-              } catch {
-                // not JSON, fallback to raw description
+
+              if (goal.priority1) priorities.push(goal.priority1);
+              if (goal.priority2) priorities.push(goal.priority2);
+              if (goal.priority3) priorities.push(goal.priority3);
+
+              if (priorities.length === 0 && goal.description) {
+                try {
+                  const json = JSON.parse(goal.description || "{}");
+                  parsedDesc = json.describe || parsedDesc;
+                  if (json.priority1) priorities.push(json.priority1);
+                  if (json.priority2) priorities.push(json.priority2);
+                  if (json.priority3) priorities.push(json.priority3);
+                } catch {
+                  // not JSON, keep raw description
+                }
               }
 
               return (

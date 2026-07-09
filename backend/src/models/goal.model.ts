@@ -7,6 +7,9 @@ export interface Goal {
   category?: string;
   difficulty?: "beginner" | "intermediate" | "advanced";
   targetDate?: string;
+  priority1?: string;
+  priority2?: string;
+  priority3?: string;
   status: "active" | "completed" | "paused";
   /** Whether this goal should influence search result ranking */
   useInSearch: boolean;
