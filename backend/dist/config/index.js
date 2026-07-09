@@ -6,7 +6,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 // src/config/index.ts
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config({ path: ".env" });
+const path_1 = __importDefault(require("path"));
+// Try loading from multiple possible locations
+const possiblePaths = [
+    path_1.default.resolve(process.cwd(), ".env"), // Current working directory
+    path_1.default.resolve(__dirname, "../.env"), // Relative to src/config
+    path_1.default.resolve(__dirname, "../../.env"), // Relative to backend root
+];
+let loaded = false;
+for (const envPath of possiblePaths) {
+    const result = dotenv_1.default.config({ path: envPath });
+    if (!result.error) {
+        console.log(`[Config] Loaded .env from: ${envPath}`);
+        loaded = true;
+        break;
+    }
+}
+if (!loaded) {
+    console.warn("[Config] Warning: .env file not found. Using environment variables or defaults.");
+}
 exports.config = {
     port: process.env.PORT || 4000,
     nodeEnv: process.env.NODE_ENV || "development",
@@ -28,6 +46,9 @@ exports.config = {
     geminiApiKey: process.env.GEMINI_API_KEY || "your-gemini-api-key",
     openrouterApiKey: process.env.OPENROUTER_API_KEY || "your-openrouter-api-key",
     openrouterModel: process.env.OPENROUTER_MODEL || "openai/gpt-4o",
+    // Google Custom Search Engine (optional, for website provider)
+    googleCseApiKey: process.env.GOOGLE_CSE_API_KEY || "",
+    googleCseCx: process.env.GOOGLE_CSE_CX || "",
 };
 exports.default = exports.config;
 //# sourceMappingURL=index.js.map

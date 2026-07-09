@@ -1,7 +1,27 @@
 // src/config/index.ts
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config({ path: ".env" });
+// Try loading from multiple possible locations
+const possiblePaths = [
+  path.resolve(process.cwd(), ".env"), // Current working directory
+  path.resolve(__dirname, "../.env"), // Relative to src/config
+  path.resolve(__dirname, "../../.env"), // Relative to backend root
+];
+
+let loaded = false;
+for (const envPath of possiblePaths) {
+  const result = dotenv.config({ path: envPath });
+  if (!result.error) {
+    console.log(`[Config] Loaded .env from: ${envPath}`);
+    loaded = true;
+    break;
+  }
+}
+
+if (!loaded) {
+  console.warn("[Config] Warning: .env file not found. Using environment variables or defaults.");
+}
 
 export const config = {
   port: process.env.PORT || 4000,
@@ -24,6 +44,9 @@ export const config = {
   geminiApiKey: process.env.GEMINI_API_KEY || "your-gemini-api-key",
   openrouterApiKey: process.env.OPENROUTER_API_KEY || "your-openrouter-api-key",
   openrouterModel: process.env.OPENROUTER_MODEL || "openai/gpt-4o",
+  // Google Custom Search Engine (optional, for website provider)
+  googleCseApiKey: process.env.GOOGLE_CSE_API_KEY || "",
+  googleCseCx: process.env.GOOGLE_CSE_CX || "",
 };
 
 export default config;

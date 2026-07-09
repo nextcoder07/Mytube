@@ -1,6 +1,20 @@
 // test-youtube-api.ts
 // Diagnostic script to test YouTube API keys and rotation system
 
+import dotenv from "dotenv";
+import path from "path";
+
+// Load .env explicitly
+const envPath = path.resolve(__dirname, ".env");
+console.log(`Loading .env from: ${envPath}`);
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.error("⚠️  Warning: Could not load .env file:", result.error.message);
+} else {
+  console.log("✅ .env file loaded successfully");
+}
+
 import { YouTubeProvider } from "./src/providers/youtube/index";
 
 async function testYouTubeAPI() {
