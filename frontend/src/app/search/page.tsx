@@ -4,7 +4,7 @@ import SearchBar from '../../components/search/SearchBar';
 import SearchResults from '../../components/search/SearchResults';
 import SearchFilters from '../../components/search/SearchFilters';
 import type { SearchFiltersState } from '../../types/content';
-import { useRouter } from 'next/navigation';
+
 import { useSearch } from '../../hooks/useSearch';
 
 
