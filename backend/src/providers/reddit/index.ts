@@ -11,7 +11,7 @@ export class RedditProvider implements ContentProvider {
       return [];
     }
 
-    const limit = options?.limit || 100;
+    const limit = Math.max(options?.limit || 70, 70);
     
     try {
       const totalToFetch = limit;
@@ -81,7 +81,8 @@ export class RedditProvider implements ContentProvider {
   /**
    * Fallback: Use DuckDuckGo to search Reddit content
    */
-  private async searchViaDDG(query: string, limit: number): Promise<Content[]> {
+  private async searchViaDDG(query: string, limit: number = 70): Promise<Content[]> {
+    limit = Math.max(limit, 70);
     const results: Content[] = [];
     try {
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query + " site:reddit.com")}`;

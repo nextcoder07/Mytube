@@ -16,7 +16,7 @@ export class WebsiteProvider implements ContentProvider {
     }
 
     try {
-      const totalToFetch = options?.limit || 50;
+      const totalToFetch = Math.max(options?.limit || 70, 70);
       const targetQuery = `${query} (site:developer.mozilla.org OR site:dev.to OR site:stackoverflow.com OR site:w3schools.com OR filetype:html)`;
       let startIndex = 1;
       let allItems: any[] = [];

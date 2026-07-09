@@ -18,7 +18,8 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
         ? (req.query.providers as string).split(",").map((p) => p.trim())
         : undefined;
 
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    // Enforce minimum limit of 70 results per source
+    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 70) : 70;
 
     // YouTube-optimized filter params
     const order = req.query.order as 'relevance' | 'date' | 'viewCount' | 'rating' | undefined;
@@ -59,8 +60,11 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
     const videoCategoryId = (req.body.videoCategoryId || req.query.videoCategoryId) as string | undefined;
     const relevanceLanguage = (req.body.relevanceLanguage || req.query.relevanceLanguage) as string | undefined;
 
+    // Enforce minimum limit of 70 results
+    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 70) : 70;
+
     const options = {
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+      limit,
       pageToken: req.query.pageToken as string | undefined,
       after: req.query.after as string | undefined,
       order,

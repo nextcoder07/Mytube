@@ -10,7 +10,7 @@ export class WikipediaProvider implements ContentProvider {
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     const results: Content[] = [];
-    const limit = Math.min(options?.limit || 50, 50);
+    const limit = Math.min(Math.max(options?.limit || 70, 70), 300); // Wikipedia supports higher limits
 
     try {
       const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(

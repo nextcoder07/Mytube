@@ -87,7 +87,7 @@ export class YouTubeProvider implements ContentProvider {
     const isChannelSearch = this.isChannelQuery(query);
     
     if (isChannelSearch) {
-      const results = await this.searchChannel(query, options?.limit || 20);
+      const results = await this.searchChannel(query, Math.max(options?.limit || 70, 70));
       console.debug(`[YouTube] Channel search for "${query}" returned ${results.length} results`);
       return results;
     }
@@ -95,20 +95,20 @@ export class YouTubeProvider implements ContentProvider {
     // Try API first, fallback to DDG if needed
     if (!keyManager.hasKeys()) {
       console.warn("[YouTube] No API keys configured. Using DDG fallback scraper for generic search.");
-      return await this.searchViaDDG(query, options?.limit || 20);
+      return await this.searchViaDDG(query, Math.max(options?.limit || 70, 70));
     }
 
     try {
-      const perPage = Math.min(options?.limit || 100, 50); // YouTube max is 50
+      const perPage = Math.min(Math.max(options?.limit || 70, 70), 50); // YouTube max is 50
       const allItems: Record<string, unknown>[] = [];
       let pageToken: string | undefined = options?.pageToken as string | undefined;
-      const totalToFetch = options?.limit || 100;
+      const totalToFetch = Math.max(options?.limit || 70, 70);
       let fetched = 0;
       let activeKey = keyManager.getKey();
 
       if (!activeKey) {
         console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
-        return await this.searchViaDDG(query, options?.limit || 20);
+        return await this.searchViaDDG(query, Math.max(options?.limit || 70, 70));
       }
 
       // Use exact query unless an AI context/goal is provided
@@ -122,14 +122,17 @@ export class YouTubeProvider implements ContentProvider {
       const relevanceLanguage = options?.relevanceLanguage || 'en';
       const safeOrder = order === 'relevance' ? 'relevance' : order;
 
+      // Enforce minimum 70 results
+      const effectiveTotal = Math.max(totalToFetch, 70);
+
       // Fetch multiple pages if needed
-      while (fetched < totalToFetch) {
+      while (fetched < effectiveTotal) {
         if (!activeKey) {
           console.warn("All YouTube API keys exhausted mid-search. Returning partial results.");
           break;
         }
 
-        const batchSize = Math.min(perPage, totalToFetch - fetched);
+        const batchSize = Math.min(perPage, effectiveTotal - fetched);
 
         // Build optimized search URL with all YouTube Data API filters
         let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet`
@@ -247,7 +250,7 @@ export class YouTubeProvider implements ContentProvider {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[YouTube] API search error:", message, "Falling back to DDG scraper");
       // Graceful fallback to DDG scraper on error
-      return await this.searchViaDDG(query, options?.limit || 20);
+      return await this.searchViaDDG(query, Math.max(options?.limit || 70, 70));
     }
   }
 
@@ -265,8 +268,10 @@ export class YouTubeProvider implements ContentProvider {
   /**
    * Fallback scraper using DuckDuckGo HTML for when YouTube API keys are exhausted.
    * Scopes search to site:youtube.com and filters for watch URLs.
+   * Always fetches at least 70 results.
    */
-  private async searchViaDDG(query: string, limit: number): Promise<Content[]> {
+  private async searchViaDDG(query: string, limit: number = 70): Promise<Content[]> {
+    limit = Math.max(limit, 70); // Enforce minimum 70 results
     const results: Content[] = [];
     try {
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query + " site:youtube.com")}`;

@@ -33,4 +33,7 @@ export interface SearchOptions {
   relevanceLanguage?: string;
   // AI Search personalization
   aiContext?: string;
+  goalId?: string;
+  // Pagination support
+  after?: string;
 }

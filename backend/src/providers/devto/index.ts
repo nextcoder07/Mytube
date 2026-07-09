@@ -11,10 +11,9 @@ export class DevToProvider implements ContentProvider {
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     const results: Content[] = [];
-    const limit = options?.limit || 30;
 
     try {
-      const limit = options?.limit || 100;
+      const limit = Math.max(options?.limit || 70, 70);
       // Free public endpoint without API key, rate limit is generous but we should still respect reasonable limits.
       const url = `https://dev.to/api/articles?search=${encodeURIComponent(query)}&per_page=${limit}`;
       const res = await fetch(url, {
