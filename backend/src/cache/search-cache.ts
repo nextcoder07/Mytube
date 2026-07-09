@@ -215,6 +215,13 @@ export class SearchCache {
   }
 
   /**
+   * Clear the entire search cache.
+   */
+  clearAll(): void {
+    this.memoryCache.clear();
+  }
+
+  /**
    * Clear all expired cache entries
    */
   clearExpired(): number {

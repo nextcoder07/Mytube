@@ -22,7 +22,7 @@ class YouTubeKeyManager {
       const cleaned = rawMultiKeys
         .trim()
         .replace(/^['"]|['"]$/g, "")
-        .split(",")
+        .split(/[,;\n\r]+/)
         .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
         .filter((k) => k.length > 0 && !k.includes("your-"));
 

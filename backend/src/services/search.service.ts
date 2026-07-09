@@ -34,29 +34,33 @@ export class SearchService {
     const batchSize = searchCache.getBatchSize();
     const fetchBatchSize = searchCache.getFetchSize();
     const topCount = Math.max(batchSize, visibleLimit);
+    const targetCacheSize = visibleLimit + batchSize; // keep one extra page available in cache
 
     const providerPromises = providers.map(async (source) => {
       const cachedItems = searchCache.getAll(query, source);
-      if (cachedItems && cachedItems.length > topCount) {
-        searchCache.trim(query, topCount, source);
+      const cachedLength = cachedItems?.length ?? 0;
+      const cacheMaxSize = targetCacheSize;
+
+      if (cachedItems && cachedLength > cacheMaxSize) {
+        searchCache.trim(query, cacheMaxSize, source);
       }
 
-      const cachedLength = cachedItems?.length ?? 0;
-      const hasSufficientCache = cachedLength >= visibleLimit;
+      const needsFetch = (searchCache.getAll(query, source)?.length ?? 0) < cacheMaxSize;
+      if (needsFetch) {
+        const currentCached = searchCache.getAll(query, source) ?? [];
+        const additionalFetch = currentCached.length === 0
+          ? fetchBatchSize
+          : Math.max(batchSize, cacheMaxSize - currentCached.length);
 
-      if (!hasSufficientCache) {
-        const additionalFetch = Math.max(fetchBatchSize, visibleLimit - cachedLength, batchSize);
         const providerResults = await providerManager.searchProvider(source, query, {
           ...options,
           providers: [source],
           limit: additionalFetch,
         });
 
-        if (cachedItems) {
-          searchCache.append(query, providerResults, source);
-        } else {
-          searchCache.set(query, providerResults, source);
-        }
+        const combinedResults = [...currentCached, ...providerResults];
+        const sortedResults = this.rankResults(combinedResults, query);
+        searchCache.set(query, sortedResults, source);
       }
 
       return searchCache.getTop(query, topCount, source) || [];
@@ -83,7 +87,9 @@ export class SearchService {
     const deduplicated = Array.from(uniqueMap.values());
     console.debug("[SearchService.search] deduplicated count=", deduplicated.length);
 
-    // 3. Rank results
+    // 3. Sort deduplicated results using relevance and goal alignment.
+    const shouldPreserveProviderOrder = false;
+
     let goal: any = null;
     if (options?.goalId && userId !== "anonymous" && isSupabaseConfigured()) {
       try {
@@ -100,7 +106,10 @@ export class SearchService {
         console.error("Failed to fetch goal for ranking:", err.message);
       }
     }
-    const ranked = this.rankResults(deduplicated, query, goal);
+
+    const ranked = shouldPreserveProviderOrder
+      ? deduplicated
+      : this.rankResults(deduplicated, query, goal);
 
     // 4. Save search history & save new content records in DB asynchronously
     //    Only attempt if Supabase is properly configured

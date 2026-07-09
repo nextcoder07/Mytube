@@ -1,10 +1,12 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 // src/components/player/GlobalPlayer.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlayerStore } from "../../store/player.store";
+import { useSearchStore } from "../../store/search.store";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
+import type { Content } from "../../types/content";
 import {
   XMarkIcon,
   MinusSmallIcon,
@@ -32,6 +34,11 @@ export default function GlobalPlayer() {
   const { isAuthenticated } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [watchBefore, setWatchBefore] = useState<Content[]>([]);
+  const [watchAfter, setWatchAfter] = useState<Content[]>([]);
+  const [relatedList, setRelatedList] = useState<Content[]>([]);
+  const [relatedLimit, setRelatedLimit] = useState(50);
+  const searchStore = useSearchStore();
 
   const handleSaveToPlaylist = async () => {
     if (!activeContent) return;
@@ -73,7 +80,6 @@ export default function GlobalPlayer() {
     window.setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  if (!activeContent) return null;
 
   // Extract YouTube ID for embedding
   const getYoutubeVideoId = (url: string) => {
@@ -92,6 +98,37 @@ export default function GlobalPlayer() {
 
   const isYouTube = activeContent.source === 'youtube';
   const videoId = isYouTube ? getYoutubeVideoId(activeContent.url) : null;
+
+
+  useEffect(() => {
+    let mounted = true;
+    async function fetchSuggestions() {
+      if (!activeContent) return;
+      const userQuery = searchStore.params?.q || '';
+
+      try {
+        const beforeRes = await api.get('/search/suggestions/before', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: 20 } });
+        if (!mounted) return;
+        setWatchBefore((beforeRes.data?.data as Content[]) || []);
+
+        const afterRes = await api.get('/search/suggestions/after', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: 20 } });
+        if (!mounted) return;
+        setWatchAfter((afterRes.data?.data as Content[]) || []);
+
+        // Related list: combined search term + current playing context + goal
+        const relatedQueryParts = [userQuery, activeContent.title, searchStore.params?.order].filter(Boolean).join(' ');
+        const relatedRes = await api.get('/search', { params: { q: relatedQueryParts || activeContent.title, providers: 'youtube', limit: relatedLimit } });
+        if (!mounted) return;
+        setRelatedList((relatedRes.data?.data as Content[]) || []);
+      } catch (err) {
+        console.warn('Failed to fetch player suggestions', err);
+      }
+    }
+    fetchSuggestions();
+    return () => { mounted = false; };
+  }, [activeContent, activeContent?.id, relatedLimit, searchStore.params?.q, searchStore.params?.order]);
+
+  if (!activeContent) return null;
 
   return (
     <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200"}>
@@ -241,6 +278,77 @@ export default function GlobalPlayer() {
 
               <div className="mt-6 p-4 bg-gray-800/50 rounded-xl border border-gray-800 text-sm text-gray-300 leading-relaxed">
                 {activeContent.description}
+              </div>
+              {/* Suggestion rows: Watch Before, Watch After, Related list */}
+              <div className="mt-6 space-y-6">
+                {/* Watch Before */}
+                {watchBefore.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
+                    <div className="flex gap-3 overflow-x-auto py-2">
+                      {watchBefore.map((item) => (
+                        <div key={`before-${item.id}`} className="min-w-[200px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                            {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-gray-200 line-clamp-2">{item.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
+                            <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Watch After */}
+                {watchAfter.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
+                    <div className="flex gap-3 overflow-x-auto py-2">
+                      {watchAfter.map((item) => (
+                        <div key={`after-${item.id}`} className="min-w-[200px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                            {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-gray-200 line-clamp-2">{item.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
+                            <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Related vertical list */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-gray-200">Related</h4>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setRelatedLimit((n) => n + 50)} className="text-xs text-violet-400">Load more</button>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 gap-4">
+                    {relatedList.map((item) => (
+                      <div key={`rel-${item.id}`} className="flex gap-3 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
+                        <div className="w-40 aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+                          {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-200 line-clamp-2">{item.title}</p>
+                          <p className="text-xs text-gray-400 mt-1">{item.author}</p>
+                          <div className="flex gap-3 mt-2">
+                            <button onClick={(e) => { e.stopPropagation(); play(item, relatedList); }} className="text-xs text-violet-400">Play</button>
+                            <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             {/* Description or Comments section could go here */}

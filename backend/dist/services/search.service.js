@@ -30,26 +30,28 @@ class SearchService {
         const batchSize = search_cache_1.searchCache.getBatchSize();
         const fetchBatchSize = search_cache_1.searchCache.getFetchSize();
         const topCount = Math.max(batchSize, visibleLimit);
+        const targetCacheSize = visibleLimit + batchSize; // keep one extra page available in cache
         const providerPromises = providers.map(async (source) => {
             const cachedItems = search_cache_1.searchCache.getAll(query, source);
-            if (cachedItems && cachedItems.length > topCount) {
-                search_cache_1.searchCache.trim(query, topCount, source);
-            }
             const cachedLength = cachedItems?.length ?? 0;
-            const hasSufficientCache = cachedLength >= visibleLimit;
-            if (!hasSufficientCache) {
-                const additionalFetch = Math.max(fetchBatchSize, visibleLimit - cachedLength, batchSize);
+            const cacheMaxSize = targetCacheSize;
+            if (cachedItems && cachedLength > cacheMaxSize) {
+                search_cache_1.searchCache.trim(query, cacheMaxSize, source);
+            }
+            const needsFetch = (search_cache_1.searchCache.getAll(query, source)?.length ?? 0) < cacheMaxSize;
+            if (needsFetch) {
+                const currentCached = search_cache_1.searchCache.getAll(query, source) ?? [];
+                const additionalFetch = currentCached.length === 0
+                    ? fetchBatchSize
+                    : Math.max(batchSize, cacheMaxSize - currentCached.length);
                 const providerResults = await providers_1.default.searchProvider(source, query, {
                     ...options,
                     providers: [source],
                     limit: additionalFetch,
                 });
-                if (cachedItems) {
-                    search_cache_1.searchCache.append(query, providerResults, source);
-                }
-                else {
-                    search_cache_1.searchCache.set(query, providerResults, source);
-                }
+                const combinedResults = [...currentCached, ...providerResults];
+                const sortedResults = this.rankResults(combinedResults, query);
+                search_cache_1.searchCache.set(query, sortedResults, source);
             }
             return search_cache_1.searchCache.getTop(query, topCount, source) || [];
         });
@@ -71,7 +73,8 @@ class SearchService {
         });
         const deduplicated = Array.from(uniqueMap.values());
         console.debug("[SearchService.search] deduplicated count=", deduplicated.length);
-        // 3. Rank results
+        // 3. Sort deduplicated results using relevance and goal alignment.
+        const shouldPreserveProviderOrder = false;
         let goal = null;
         if (options?.goalId && userId !== "anonymous" && isSupabaseConfigured()) {
             try {
@@ -89,7 +92,9 @@ class SearchService {
                 console.error("Failed to fetch goal for ranking:", err.message);
             }
         }
-        const ranked = this.rankResults(deduplicated, query, goal);
+        const ranked = shouldPreserveProviderOrder
+            ? deduplicated
+            : this.rankResults(deduplicated, query, goal);
         // 4. Save search history & save new content records in DB asynchronously
         //    Only attempt if Supabase is properly configured
         if (isSupabaseConfigured()) {

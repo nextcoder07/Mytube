@@ -10,5 +10,7 @@ router.get("/", search_controller_1.search);
 router.post("/ai", search_controller_1.searchAI);
 router.delete("/cache", search_controller_1.clearSearchCache);
 router.get("/history", search_controller_1.getSearchHistory);
+router.get("/suggestions/before", search_controller_1.suggestionsBefore);
+router.get("/suggestions/after", search_controller_1.suggestionsAfter);
 exports.default = router;
 //# sourceMappingURL=search.routes.js.map

@@ -1,6 +1,6 @@
 // frontend/src/hooks/useSearch.ts
 import { useState, useCallback, useRef } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { Content } from '../types/content';
 
@@ -90,8 +90,8 @@ export function useSearch() {
     },
     enabled: !!params?.q,
     staleTime: 15 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-    placeholderData: keepPreviousData,
+    cacheTime: 60 * 60 * 1000,
+    keepPreviousData: true,
   };
 
   const { data, isLoading, isFetching, error } = useQuery(queryOptions);
@@ -99,21 +99,7 @@ export function useSearch() {
   const responseMeta = (data as ApiResponse<Content[]>)?.meta ?? null;
   const results: Content[] = (data as ApiResponse<Content[]>)?.data ?? [];
 
-  const clearCacheForQuery = useCallback(async (q: string) => {
-    try {
-      await api.delete('/search/cache', { params: { q } });
-    } catch (err) {
-      console.warn('[useSearch] Failed to clear cache for query', q, err);
-    }
-  }, []);
-
-  const trimCacheForQuery = useCallback(async (q: string, limit: number) => {
-    try {
-      await api.delete('/search/cache', { params: { q, limit } });
-    } catch (err) {
-      console.warn('[useSearch] Failed to trim cache for query', q, 'to', limit, err);
-    }
-  }, []);
+  // Removed: clearing the full search cache on mount was previously performed here.
 
   // After each fetch, check if we got fewer results than the limit (meaning no more to load)
   if (results.length > 0 && results.length !== prevResultCountRef.current) {
@@ -133,7 +119,11 @@ export function useSearch() {
       if (prevParams && prevParams.q && prevParams.q !== newParams.q) {
         setQueryHistory((prevHistory) => [...prevHistory, prevParams]);
       }
-      return { ...newParams, limit: BATCH_SIZE };
+      // If this is a YouTube-only search, seed with 100 results first
+      const providers = newParams.providers || '';
+      const isYouTubeOnly = providers && providers.split(',').map(p => p.trim().toLowerCase()).length === 1 && providers.toLowerCase().includes('youtube');
+      const initialLimit = isYouTubeOnly ? 100 : BATCH_SIZE;
+      return { ...newParams, limit: initialLimit };
     });
   }, []);
 
@@ -148,13 +138,15 @@ export function useSearch() {
     const currentLimit = params.limit || BATCH_SIZE;
     if (currentLimit > BATCH_SIZE) {
       const newLimit = currentLimit - LOAD_MORE_STEP;
+      if (params.q) {
+        api.delete('/search/cache', { params: { q: params.q, limit: newLimit } }).catch((err) => {
+          console.warn('[useSearch] Failed to trim cache for query', params.q, 'to', newLimit, err);
+        });
+      }
       setParams({ ...params, limit: newLimit });
       setHasMore(true); // Since we stepped back, we definitely have more to load ahead
-      if (params.q) {
-        trimCacheForQuery(params.q, newLimit);
-      }
     }
-  }, [params, isFetching, trimCacheForQuery]);
+  }, [params, isFetching]);
 
   const goBackQuery = useCallback(() => {
     if (queryHistory.length === 0) return;
@@ -169,11 +161,13 @@ export function useSearch() {
     prevResultCountRef.current = 0;
     setHasMore(true);
     if (params?.q) {
-      clearCacheForQuery(params.q);
+      api.delete('/search/cache', { params: { q: params.q } }).catch((err) => {
+        console.warn('[useSearch] Failed to clear cache for query', params.q, err);
+      });
     }
     setParams(null);
     setQueryHistory([]);
-  }, [params?.q, clearCacheForQuery]);
+  }, [params?.q]);
 
   return { 
     results, 

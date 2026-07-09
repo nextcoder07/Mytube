@@ -86,12 +86,19 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
 
 export const clearSearchCache = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = req.query.q as string;
-    if (!query) {
-      return next(new HttpError(400, "Query parameter 'q' is required to clear or trim search cache."));
+    const query = req.query.q as string | undefined;
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+
+    if (!query && limitParam !== undefined) {
+      return next(new HttpError(400, "Limit may only be used with a query parameter."));
     }
 
-    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    if (!query) {
+      searchCache.clearAll();
+      res.status(200).json(success(null, "Full search cache cleared."));
+      return;
+    }
+
     if (limitParam && limitParam > 0) {
       searchCache.trim(query, limitParam);
       res.status(200).json(success(null, `Search cache trimmed to top ${limitParam} results for query: ${query}`));
@@ -112,6 +119,55 @@ export const getSearchHistory = async (req: Request, res: Response, next: NextFu
 
     const history = await SearchService.getHistory(user.uid);
     res.status(200).json(success(history, "Search history fetched"));
+  } catch (err: any) {
+    next(err);
+  }
+};
+
+export const suggestionsBefore = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = (req as any).user;
+    const userId = user?.uid || 'anonymous';
+
+    const contentTitle = (req.query.contentTitle as string) || '';
+    const q = (req.query.q as string) || '';
+    const providers = req.query.providers ? (req.query.providers as string).split(',').map(p => p.trim()) : ['youtube'];
+    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 10) : 20;
+
+    if (!contentTitle && !q) return next(new HttpError(400, "Either contentTitle or q is required"));
+
+    // Build a general, query-driven "before" prompt that prefers prerequisites, introductions, or previous parts,
+    // but is not limited to episodes. Always include the user's search query and the current content title.
+    const base = [q, contentTitle].filter(Boolean).join(' ').trim();
+    const beforeTerms = ['introduction', 'basics', 'prerequisite', 'part 1', 'previous', 'overview', 'beginner guide'];
+    const beforeQuery = `${base} ${beforeTerms.join(' OR ')}`.trim();
+
+    const results = await SearchService.search(userId, beforeQuery, { providers, limit });
+    res.status(200).json(success(results, 'Suggestions (before) fetched'));
+  } catch (err: any) {
+    next(err);
+  }
+};
+
+export const suggestionsAfter = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = (req as any).user;
+    const userId = user?.uid || 'anonymous';
+
+    const contentTitle = (req.query.contentTitle as string) || '';
+    const q = (req.query.q as string) || '';
+    const providers = req.query.providers ? (req.query.providers as string).split(',').map(p => p.trim()) : ['youtube'];
+    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 10) : 20;
+
+    if (!contentTitle && !q) return next(new HttpError(400, "Either contentTitle or q is required"));
+
+    // Build a general, query-driven "after" prompt that prefers follow-ups, next parts, or deeper dives.
+    const baseAfter = [q, contentTitle].filter(Boolean).join(' ').trim();
+    const afterTerms = ['follow up', 'part 2', 'next', 'advanced', 'deep dive', 'continued'];
+    const afterQuery = `${baseAfter} ${afterTerms.join(' OR ')}`.trim();
+
+    const results = await SearchService.search(userId, afterQuery, { providers, limit });
+    res.status(200).json(success(results, 'Suggestions (after) fetched'));
   } catch (err: any) {
     next(err);
   }

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSearchHistory = exports.clearSearchCache = exports.searchAI = exports.search = void 0;
+exports.suggestionsAfter = exports.suggestionsBefore = exports.getSearchHistory = exports.clearSearchCache = exports.searchAI = exports.search = void 0;
 const search_service_1 = __importDefault(require("../services/search.service"));
 const providers_1 = __importDefault(require("../providers"));
 const search_cache_1 = require("../cache/search-cache");
@@ -82,10 +82,15 @@ exports.searchAI = searchAI;
 const clearSearchCache = async (req, res, next) => {
     try {
         const query = req.query.q;
-        if (!query) {
-            return next(new errors_1.HttpError(400, "Query parameter 'q' is required to clear or trim search cache."));
-        }
         const limitParam = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
+        if (!query && limitParam !== undefined) {
+            return next(new errors_1.HttpError(400, "Limit may only be used with a query parameter."));
+        }
+        if (!query) {
+            search_cache_1.searchCache.clearAll();
+            res.status(200).json((0, response_1.success)(null, "Full search cache cleared."));
+            return;
+        }
         if (limitParam && limitParam > 0) {
             search_cache_1.searchCache.trim(query, limitParam);
             res.status(200).json((0, response_1.success)(null, `Search cache trimmed to top ${limitParam} results for query: ${query}`));
@@ -112,4 +117,49 @@ const getSearchHistory = async (req, res, next) => {
     }
 };
 exports.getSearchHistory = getSearchHistory;
+const suggestionsBefore = async (req, res, next) => {
+    try {
+        const user = req.user;
+        const userId = user?.uid || 'anonymous';
+        const contentTitle = req.query.contentTitle || '';
+        const q = req.query.q || '';
+        const providers = req.query.providers ? req.query.providers.split(',').map(p => p.trim()) : ['youtube'];
+        const limit = req.query.limit ? Math.max(parseInt(req.query.limit, 10), 10) : 20;
+        if (!contentTitle && !q)
+            return next(new errors_1.HttpError(400, "Either contentTitle or q is required"));
+        // Build a general, query-driven "before" prompt that prefers prerequisites, introductions, or previous parts,
+        // but is not limited to episodes. Always include the user's search query and the current content title.
+        const base = [q, contentTitle].filter(Boolean).join(' ').trim();
+        const beforeTerms = ['introduction', 'basics', 'prerequisite', 'part 1', 'previous', 'overview', 'beginner guide'];
+        const beforeQuery = `${base} ${beforeTerms.join(' OR ')}`.trim();
+        const results = await search_service_1.default.search(userId, beforeQuery, { providers, limit });
+        res.status(200).json((0, response_1.success)(results, 'Suggestions (before) fetched'));
+    }
+    catch (err) {
+        next(err);
+    }
+};
+exports.suggestionsBefore = suggestionsBefore;
+const suggestionsAfter = async (req, res, next) => {
+    try {
+        const user = req.user;
+        const userId = user?.uid || 'anonymous';
+        const contentTitle = req.query.contentTitle || '';
+        const q = req.query.q || '';
+        const providers = req.query.providers ? req.query.providers.split(',').map(p => p.trim()) : ['youtube'];
+        const limit = req.query.limit ? Math.max(parseInt(req.query.limit, 10), 10) : 20;
+        if (!contentTitle && !q)
+            return next(new errors_1.HttpError(400, "Either contentTitle or q is required"));
+        // Build a general, query-driven "after" prompt that prefers follow-ups, next parts, or deeper dives.
+        const baseAfter = [q, contentTitle].filter(Boolean).join(' ').trim();
+        const afterTerms = ['follow up', 'part 2', 'next', 'advanced', 'deep dive', 'continued'];
+        const afterQuery = `${baseAfter} ${afterTerms.join(' OR ')}`.trim();
+        const results = await search_service_1.default.search(userId, afterQuery, { providers, limit });
+        res.status(200).json((0, response_1.success)(results, 'Suggestions (after) fetched'));
+    }
+    catch (err) {
+        next(err);
+    }
+};
+exports.suggestionsAfter = suggestionsAfter;
 //# sourceMappingURL=search.controller.js.map
