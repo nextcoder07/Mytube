@@ -1,5 +1,6 @@
 // src/store/player.store.ts
 import { create } from "zustand";
+import { persist } from 'zustand/middleware';
 import { Content } from "../types/content";
 
 interface PlayerState {
@@ -30,37 +31,36 @@ interface PlayerState {
   isInWatchLater: (contentId: string) => boolean;
 }
 
-export const usePlayerStore = create<PlayerState>((set, get) => ({
-  activeContent: null,
-  isMinimized: false,
-  queue: [],
-  history: [],
-  watchLater: [],
-  instanceId: null,
+export const usePlayerStore = create<PlayerState>()(
+  persist(
+    (set, get) => ({
+      activeContent: null,
+      isMinimized: false,
+      queue: [],
+      history: [],
+      watchLater: [],
+      instanceId: null,
 
-  play: (content, queue) =>
-    set((state) => {
-      const history = [...state.history];
-      // Push current item into history (deduplicated)
-      if (state.activeContent && state.activeContent.id !== content.id) {
-        // Remove if already in history to avoid duplicates, then push
-        const idx = history.findIndex((h) => h.id === state.activeContent!.id);
-        if (idx !== -1) history.splice(idx, 1);
-        history.push(state.activeContent);
-      }
-      // Only change instanceId if actually switching content
-      const newInstanceId =
-        state.activeContent?.id === content.id
-          ? state.instanceId
-          : `player-${content.id}-${Date.now()}`;
-      return {
-        activeContent: content,
-        isMinimized: false,
-        queue: queue || state.queue,
-        history,
-        instanceId: newInstanceId,
-      };
-    }),
+      play: (content, queue) =>
+        set((state) => {
+          const history = [...state.history];
+          if (state.activeContent && state.activeContent.id !== content.id) {
+            const idx = history.findIndex((h) => h.id === state.activeContent!.id);
+            if (idx !== -1) history.splice(idx, 1);
+            history.push(state.activeContent);
+          }
+          const newInstanceId =
+            state.activeContent?.id === content.id
+              ? state.instanceId
+              : `player-${content.id}-${Date.now()}`;
+          return {
+            activeContent: content,
+            isMinimized: false,
+            queue: queue || state.queue,
+            history,
+            instanceId: newInstanceId,
+          };
+        }),
 
   // Minimize & maximize do NOT touch instanceId — iframe stays alive
   minimize: () => set({ isMinimized: true }),
@@ -158,6 +158,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isInWatchLater: (contentId) => {
     return get().watchLater.some((c) => c.id === contentId);
   },
-}));
+    }),
+    {
+      name: 'mytube-player-store',
+      partialize: (state) => ({
+        activeContent: state.activeContent,
+        queue: state.queue,
+        history: state.history,
+        watchLater: state.watchLater,
+        isMinimized: state.isMinimized,
+      }),
+    }
+  )
+);
 
 export default usePlayerStore;

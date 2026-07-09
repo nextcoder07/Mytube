@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface SearchParams {
   q: string;
@@ -23,15 +24,23 @@ interface SearchState {
   setHasMore: (hasMore: boolean) => void;
 }
 
-export const useSearchStore = create<SearchState>((set) => ({
-  params: null,
-  queryHistory: [],
-  hasMore: true,
-  setParams: (newParams) => set((state) => ({
-    params: typeof newParams === 'function' ? newParams(state.params) : newParams
-  })),
-  setQueryHistory: (newHistory) => set((state) => ({
-    queryHistory: typeof newHistory === 'function' ? newHistory(state.queryHistory) : newHistory
-  })),
-  setHasMore: (hasMore) => set({ hasMore }),
-}));
+export const useSearchStore = create<SearchState>()(
+  persist(
+    (set) => ({
+      params: null,
+      queryHistory: [],
+      hasMore: true,
+      setParams: (newParams) => set((state) => ({
+        params: typeof newParams === 'function' ? newParams(state.params) : newParams
+      })),
+      setQueryHistory: (newHistory) => set((state) => ({
+        queryHistory: typeof newHistory === 'function' ? newHistory(state.queryHistory) : newHistory
+      })),
+      setHasMore: (hasMore) => set({ hasMore }),
+    }),
+    {
+      name: 'mytube-search-store',
+      partialize: (state) => ({ params: state.params, queryHistory: state.queryHistory, hasMore: state.hasMore }),
+    }
+  )
+);
