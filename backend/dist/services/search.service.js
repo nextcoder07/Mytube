@@ -21,7 +21,7 @@ class SearchService {
      * Search providers, deduplicate, rank, save results, and log search history.
      */
     static async search(userId, query, options) {
-        const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website"];
+        const providers = options?.providers || ["youtube", "devto", "github", "reddit", "medium", "wikipedia", "website"];
         console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
         const targetLimit = options?.limit || 100;
         // Request a larger pool of results from providers to rank and filter effectively
@@ -42,7 +42,7 @@ class SearchService {
         const deduplicated = Array.from(uniqueMap.values());
         console.debug("[SearchService.search] deduplicated count=", deduplicated.length);
         // 3. Rank results
-        const ranked = this.rankResults(deduplicated, query);
+        const ranked = this.rankResults(deduplicated, query, options?.aiContext);
         // 4. Save search history & save new content records in DB asynchronously
         //    Only attempt if Supabase is properly configured
         if (isSupabaseConfigured()) {
@@ -221,79 +221,45 @@ Schema:
             return true;
         return false;
     }
-    static rankResults(items, query) {
+    static rankResults(items, query, aiContext) {
         const querySE = this.extractSeasonAndEpisode(query);
         const normalizedCleanQuery = this.normalizeText(querySE.cleanText);
-        // Extract tokens from the query: allow length >= 1 if it's a number, otherwise length >= 2
         const queryTokens = normalizedCleanQuery
             .split(/\s+/)
             .filter(token => token.length >= 2 || /^\d+$/.test(token));
+        const contextTokens = aiContext
+            ? this.normalizeText(aiContext).split(/\s+/).filter(token => token.length >= 3)
+            : [];
         return items
-            .map((item, index) => {
+            .map((item) => {
             let score = 0;
             const normalizedTitle = this.normalizeText(item.title);
             const normalizedDesc = this.normalizeText(item.description || "");
-            // 1. Season/Episode Matching (if specified in query)
-            const titleSE = this.extractSeasonAndEpisode(item.title);
-            // Season check
-            if (querySE.season !== null) {
-                if (titleSE.season !== null) {
-                    if (querySE.season === titleSE.season) {
-                        score += 100;
-                    }
-                    else {
-                        // Mild penalty for mismatching season, not filtering it out
-                        score -= 50;
-                    }
-                }
-                else {
-                    score -= 10;
-                }
-            }
-            // Episode check
-            if (querySE.episode !== null) {
-                if (titleSE.episode !== null) {
-                    if (querySE.episode === titleSE.episode) {
-                        score += 150;
-                    }
-                    else {
-                        // Mild penalty for mismatching episode
-                        score -= 50;
-                    }
-                }
-                else {
-                    score -= 10;
-                }
-            }
-            // 2. Exact Phrase Boost
+            const allText = `${normalizedTitle} ${normalizedDesc} ${item.tags.join(" ")}`.toLowerCase();
+            // 1. Exact query match in title (Highest boost)
             if (normalizedTitle.includes(normalizedCleanQuery)) {
-                score += 150;
+                score += 200;
             }
-            // 3. Keyword Token Coverage Boost
-            let titleTokenMatches = 0;
+            else if (allText.includes(normalizedCleanQuery)) {
+                score += 100;
+            }
+            // 2. Query token coverage
+            let tokenMatches = 0;
             queryTokens.forEach(token => {
-                if (this.matchToken(token, normalizedTitle)) {
-                    titleTokenMatches++;
-                }
+                if (this.matchToken(token, allText))
+                    tokenMatches++;
             });
-            const coverageRatio = queryTokens.length > 0 ? titleTokenMatches / queryTokens.length : 0;
-            score += coverageRatio * 100;
-            if (coverageRatio === 1.0) {
-                score += 50; // Extra bonus for matching all query tokens
+            if (queryTokens.length > 0) {
+                score += (tokenMatches / queryTokens.length) * 100;
             }
-            // 4. Original list index weight (preserves API rank as tie-breaker)
-            // Since we fetch up to 100 items per provider, scale this boost to 100
-            const indexBoost = Math.max(0, 100 - index);
-            score += indexBoost;
-            // 5. Popularity bonus (small contribution to keep it query-first)
-            if (item.source === "github" && item.viewCount) {
-                score += Math.min(item.viewCount / 1000, 15);
-            }
-            else if (item.source === "youtube" && item.viewCount) {
-                score += Math.min(item.viewCount / 200000, 15);
-            }
-            else if (item.source === "reddit" && item.viewCount) {
-                score += Math.min(item.viewCount / 100, 15);
+            // 3. Goal/Context semantic relevance
+            if (contextTokens.length > 0) {
+                let contextMatches = 0;
+                contextTokens.forEach(token => {
+                    if (this.matchToken(token, allText))
+                        contextMatches++;
+                });
+                score += (contextMatches / contextTokens.length) * 150;
             }
             return { item, score };
         })

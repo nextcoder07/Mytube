@@ -91,36 +91,7 @@ function HScrollRow({
   );
 }
 
-// ─── Stacked vertical card (for desktop sidebar) ──────────────────────────────
-function SidebarCard({ item, isActive, onClick }: { item: Content; isActive: boolean; onClick: () => void }) {
-  return (
-    <div
-      onClick={onClick}
-      className={`flex gap-3 p-2 rounded-xl cursor-pointer group transition-colors ${
-        isActive
-          ? "bg-violet-600/15 border border-violet-500/25"
-          : "hover:bg-gray-800/70 border border-transparent"
-      }`}
-    >
-      <div className="relative w-28 flex-shrink-0 aspect-video rounded-lg overflow-hidden bg-gray-800">
-        {item.thumbnail ? (
-          <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <PlayIcon className="w-5 h-5 text-gray-600" />
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col justify-center overflow-hidden min-w-0">
-        <p className={`text-xs font-semibold line-clamp-2 leading-snug ${isActive ? "text-violet-300" : "text-gray-200 group-hover:text-white"}`}>
-          {item.title}
-        </p>
-        <p className="text-[11px] text-gray-500 mt-1 truncate">{item.author || item.source}</p>
-        <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-600">{item.source}</span>
-      </div>
-    </div>
-  );
-}
+
 
 // ─── Main GlobalPlayer ────────────────────────────────────────────────────────
 export default function GlobalPlayer() {
@@ -136,6 +107,41 @@ export default function GlobalPlayer() {
   const { isAuthenticated } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  
+  // Dynamic related content state
+  const [relatedContent, setRelatedContent] = useState<Content[]>([]);
+  const [isFetchingRelated, setIsFetchingRelated] = useState(false);
+
+  // Fetch related content when activeContent changes
+  React.useEffect(() => {
+    if (!activeContent) return;
+    let isMounted = true;
+    
+    async function fetchRelated() {
+      setIsFetchingRelated(true);
+      try {
+        // Build a query from title to get related content
+        const query = activeContent!.title.replace(/[^\w\s]/gi, ' ').trim();
+        const goal = localStorage.getItem("mytube_ai_context") || "";
+        const res = await api.get("/search", { 
+          params: { q: query, limit: 10, aiContext: goal }
+        });
+        
+        if (isMounted) {
+          // Filter out the currently playing video
+          const filtered = (res.data.data as Content[]).filter(c => c.id !== activeContent!.id);
+          setRelatedContent(filtered);
+        }
+      } catch (err) {
+        console.error("Failed to fetch related content", err);
+      } finally {
+        if (isMounted) setIsFetchingRelated(false);
+      }
+    }
+    
+    fetchRelated();
+    return () => { isMounted = false; };
+  }, [activeContent?.id]);
 
   const handleSaveToPlaylist = async () => {
     if (!activeContent) return;
@@ -165,9 +171,6 @@ export default function GlobalPlayer() {
   const currentIndex = queue.findIndex((c) => c.id === activeContent.id);
   const prevItems = currentIndex > 0 ? queue.slice(0, currentIndex) : [];
   const nextItems = currentIndex !== -1 ? queue.slice(currentIndex + 1) : queue;
-  // Top 6 of next for the "Up Next" row; rest go below
-  const nextRowItems = nextItems.slice(0, 8);
-  const moreItems = nextItems.slice(8);
 
   // ── YouTube helper ────────────────────────────────────────────────────────
   const getYoutubeVideoId = (url: string) => {
@@ -210,145 +213,126 @@ export default function GlobalPlayer() {
     );
   }
 
-  // ─── Maximized ───────────────────────────────────────────────────────────
+  // ─── Maximized (Full Width Layout) ───────────────────────────────────────
   return (
-    <div className="flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200">
-
-      {/* ── LEFT: Main player + rows ── */}
-      <div className="flex-1 flex flex-col xl:overflow-y-auto min-w-0">
-
-        {/* Player embed */}
-        <div className="w-full bg-black aspect-video xl:max-h-[65vh] flex items-center justify-center relative shadow-xl flex-shrink-0">
-          {/* Controls overlay */}
-          <div className="absolute top-3 right-3 flex gap-2 z-10">
-            <button onClick={minimize} className="p-1.5 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Minimize">
-              <MinusSmallIcon className="w-4 h-4" />
-            </button>
-            <button onClick={closePlayer} className="p-1.5 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Close">
-              <XMarkIcon className="w-4 h-4" />
-            </button>
-          </div>
-
-          {isYouTube && videoId ? (
-            <iframe
-              className="w-full h-full"
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white select-none">
-              <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-5 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
-                {activeContent.thumbnail ? (
-                  <img src={activeContent.thumbnail} alt={activeContent.title} className="w-24 h-24 mx-auto rounded-xl object-cover border border-slate-800 shadow" />
-                ) : (
-                  <div className="w-20 h-20 mx-auto rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                    <SparklesIcon className="w-10 h-10" />
-                  </div>
-                )}
-                <span className="px-2.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[10px] font-bold uppercase tracking-wider">{activeContent.source}</span>
-                <h3 className="text-base font-extrabold line-clamp-2">{activeContent.title}</h3>
-                <a href={activeContent.url} target="_blank" rel="noopener noreferrer"
-                  className="w-full py-2.5 px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 transition-all">
-                  Open in New Tab
-                </a>
-              </div>
-            </div>
-          )}
+    <div className="flex-1 w-full h-full bg-gray-900 flex flex-col overflow-y-auto animate-in fade-in duration-200">
+      
+      {/* Player embed - Full Width */}
+      <div className="w-full bg-black aspect-video lg:max-h-[75vh] flex items-center justify-center relative shadow-2xl flex-shrink-0">
+        {/* Controls overlay */}
+        <div className="absolute top-4 right-4 flex gap-2 z-10">
+          <button onClick={minimize} className="p-2 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Minimize">
+            <MinusSmallIcon className="w-5 h-5" />
+          </button>
+          <button onClick={closePlayer} className="p-2 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Close">
+            <XMarkIcon className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Info & Actions */}
-        <div className="p-4 md:p-6 lg:px-8 border-b border-gray-800">
-          <h1 className="text-lg md:text-xl font-bold text-white mb-3">{activeContent.title}</h1>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 text-sm text-gray-400 font-medium">
-              <span>{activeContent.author || "Unknown Author"}</span>
-              {activeContent.viewCount !== undefined && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-gray-600" />
-                  <span>{activeContent.viewCount.toLocaleString()} views</span>
-                </>
+        {isYouTube && videoId ? (
+          <iframe
+            className="w-full h-full"
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+            title="YouTube video player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white select-none">
+            <div className="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+              {activeContent.thumbnail ? (
+                <img src={activeContent.thumbnail} alt={activeContent.title} className="w-32 h-32 mx-auto rounded-2xl object-cover border border-slate-800 shadow-xl" />
+              ) : (
+                <div className="w-24 h-24 mx-auto rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                  <SparklesIcon className="w-12 h-12" />
+                </div>
               )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setShowSummary(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-400 hover:text-white rounded-lg text-xs font-semibold transition-colors">
-                <SparklesIcon className="w-3.5 h-3.5" /> AI Summarize
-              </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-white rounded-lg text-xs font-semibold transition-colors">
-                <DocumentPlusIcon className="w-3.5 h-3.5" /> Note
-              </button>
-              <button onClick={handleSaveToPlaylist}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg text-xs font-semibold transition-colors border border-gray-700">
-                <BookmarkIcon className="w-3.5 h-3.5" /> Save
-              </button>
+              <span className="px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[11px] font-bold uppercase tracking-wider">{activeContent.source}</span>
+              <h3 className="text-xl md:text-2xl font-extrabold line-clamp-2 leading-tight">{activeContent.title}</h3>
+              <a href={activeContent.url} target="_blank" rel="noopener noreferrer"
+                className="w-full max-w-sm mx-auto py-3 px-6 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-violet-600/25">
+                Open in New Tab
+              </a>
             </div>
           </div>
-          {saveStatus && <div className="mt-2 text-xs text-gray-400">{saveStatus}</div>}
-          {activeContent.description && (
-            <div className="mt-4 p-3 bg-gray-800/40 rounded-xl border border-gray-800 text-sm text-gray-400 leading-relaxed line-clamp-3">
-              {activeContent.description}
-            </div>
-          )}
-        </div>
+        )}
+      </div>
 
-        {/* ── ROW 1: Previous videos (horizontal scroll) ── */}
+      {/* Content Info & Actions */}
+      <div className="max-w-screen-2xl mx-auto w-full p-4 md:p-8 lg:p-10 border-b border-gray-800">
+        <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-white mb-4 leading-tight">{activeContent.title}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-3 text-sm text-gray-400 font-medium">
+            <span className="text-gray-300 font-semibold">{activeContent.author || "Unknown Author"}</span>
+            {activeContent.viewCount !== undefined && (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                <span>{activeContent.viewCount.toLocaleString()} views</span>
+              </>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setShowSummary(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-400 hover:text-white rounded-xl text-sm font-semibold transition-colors">
+              <SparklesIcon className="w-4 h-4" /> AI Summarize
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-white rounded-xl text-sm font-semibold transition-colors">
+              <DocumentPlusIcon className="w-4 h-4" /> Note
+            </button>
+            <button onClick={handleSaveToPlaylist}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white rounded-xl text-sm font-semibold transition-colors border border-gray-700">
+              <BookmarkIcon className="w-4 h-4" /> Save
+            </button>
+          </div>
+        </div>
+        {saveStatus && <div className="mt-3 text-sm text-violet-400 font-medium">{saveStatus}</div>}
+        {activeContent.description && (
+          <div className="mt-6 p-4 md:p-5 bg-gray-800/40 rounded-2xl border border-gray-800/60 text-sm md:text-base text-gray-400 leading-relaxed max-w-5xl">
+            {activeContent.description}
+          </div>
+        )}
+      </div>
+
+      {/* Content Discovery Rows */}
+      <div className="max-w-screen-2xl mx-auto w-full pb-20">
         <HScrollRow
-          title="⏮ Previously"
+          title="▶ Up Next in Queue"
+          items={nextItems}
+          onPlay={play}
+          accent="violet"
+        />
+
+        <HScrollRow
+          title="⏮ Previously Played"
           items={prevItems}
           onPlay={play}
           badge="prev"
           accent="indigo"
         />
 
-        {/* ── ROW 2: Up Next (horizontal scroll) ── */}
-        <HScrollRow
-          title="▶ Up Next"
-          items={nextRowItems}
-          onPlay={play}
-          accent="violet"
-        />
-
-        {/* ── ROW 3: More related items (hidden on xl where sidebar shows them) ── */}
-        {moreItems.length > 0 && (
-          <div className="px-4 md:px-6 lg:px-8 py-4 xl:hidden">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-fuchsia-400 border-l-2 border-fuchsia-500/40 pl-2 mb-3">
-              More Related
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {moreItems.map((item) => (
-                <MiniCard key={item.id} item={item} onClick={() => play(item)} />
+        <div className="px-4 md:px-6 lg:px-8 py-6">
+          <h2 className="text-sm font-bold uppercase tracking-widest mb-4 border-l-2 pl-3 text-fuchsia-400 border-fuchsia-500/40 flex items-center gap-2">
+            <SparklesIcon className="w-4 h-4" />
+            More Like This
+          </h2>
+          {isFetchingRelated ? (
+            <div className="flex gap-4 overflow-hidden py-2">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex-shrink-0 w-44 sm:w-52 aspect-video bg-gray-800/50 animate-pulse rounded-xl" />
               ))}
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── RIGHT SIDEBAR: Desktop only (xl+) — all related/queue items ── */}
-      <div className="hidden xl:flex w-[340px] flex-shrink-0 flex-col border-l border-gray-800 bg-gray-950 xl:h-full xl:overflow-hidden">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10">
-          <h3 className="font-bold text-white text-sm uppercase tracking-wider">Related &amp; Suggested</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{queue.length - 1} items in queue</p>
-        </div>
-
-        {/* All queue items as vertical stacked list */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          {queue.filter((q) => q.id !== activeContent.id).map((item) => (
-            <SidebarCard
-              key={item.id}
-              item={item}
-              isActive={false}
-              onClick={() => play(item)}
-            />
-          ))}
-          {queue.length <= 1 && (
-            <div className="text-center py-12 text-gray-600 text-xs">
-              No related items yet.<br />Search for more content.
-            </div>
+          ) : (
+            relatedContent.length > 0 ? (
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+                {relatedContent.map((item) => (
+                  <MiniCard key={item.id} item={item} onClick={() => play(item)} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm italic">No deeply related content found based on your goals.</p>
+            )
           )}
         </div>
       </div>

@@ -6,6 +6,8 @@ const github_1 = require("./github");
 const reddit_1 = require("./reddit");
 const medium_1 = require("./medium");
 const website_1 = require("./website");
+const devto_1 = require("./devto");
+const wikipedia_1 = require("./wikipedia");
 class ProviderManager {
     providers = new Map();
     constructor() {
@@ -15,6 +17,8 @@ class ProviderManager {
         this.register(new reddit_1.RedditProvider());
         this.register(new medium_1.MediumProvider());
         this.register(new website_1.WebsiteProvider());
+        this.register(new devto_1.DevToProvider());
+        this.register(new wikipedia_1.WikipediaProvider());
     }
     register(provider) {
         this.providers.set(provider.name.toLowerCase(), provider);

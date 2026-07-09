@@ -5,6 +5,8 @@ import { GitHubProvider } from "./github";
 import { RedditProvider } from "./reddit";
 import { MediumProvider } from "./medium";
 import { WebsiteProvider } from "./website";
+import { DevToProvider } from "./devto";
+import { WikipediaProvider } from "./wikipedia";
 import { Content, SearchOptions } from "../models/content.model";
 
 export class ProviderManager {
@@ -17,6 +19,8 @@ export class ProviderManager {
     this.register(new RedditProvider());
     this.register(new MediumProvider());
     this.register(new WebsiteProvider());
+    this.register(new DevToProvider());
+    this.register(new WikipediaProvider());
   }
 
   register(provider: ContentProvider): void {

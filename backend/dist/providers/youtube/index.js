@@ -75,8 +75,8 @@ class YouTubeProvider {
     name = "youtube";
     async search(query, options) {
         if (!keyManager.hasKeys()) {
-            console.warn("YouTube API Key(s) not set. Search disabled; returning no results.");
-            return [];
+            console.warn("YouTube API Key(s) not set. Falling back to DuckDuckGo scraper.");
+            return this.searchViaDDG(query, options?.limit || 20);
         }
         try {
             const perPage = Math.min(options?.limit || 100, 50); // YouTube max is 50
@@ -86,8 +86,8 @@ class YouTubeProvider {
             let fetched = 0;
             let activeKey = keyManager.getKey();
             if (!activeKey) {
-                console.warn("All YouTube API keys are rate-limited. Returning no results.");
-                return [];
+                console.warn("All YouTube API keys are rate-limited. Falling back to DuckDuckGo scraper.");
+                return this.searchViaDDG(query, options?.limit || 20);
             }
             // Use exact query unless an AI context/goal is provided
             let effectiveQuery = query;
@@ -222,6 +222,84 @@ class YouTubeProvider {
         const minutes = parseInt(matches[2] || "0", 10);
         const seconds = parseInt(matches[3] || "0", 10);
         return hours * 3600 + minutes * 60 + seconds;
+    }
+    /**
+     * Fallback scraper using DuckDuckGo HTML for when YouTube API keys are exhausted.
+     * Scopes search to site:youtube.com and filters for watch URLs.
+     */
+    async searchViaDDG(query, limit) {
+        const results = [];
+        try {
+            const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query + " site:youtube.com")}`;
+            const res = await fetch(url, {
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                },
+                signal: AbortSignal.timeout(8000),
+            });
+            if (!res.ok)
+                return results;
+            const html = await res.text();
+            const parts = html.split('<div class="result ');
+            for (let i = 1; i < parts.length && results.length < limit; i++) {
+                const part = parts[i];
+                if (part.includes('class="badge--ad"') || part.includes("result--ad"))
+                    continue;
+                const titleMatch = part.match(/<a[^>]+class="result__a"[^>]*>([\s\S]*?)<\/a>/);
+                const snippetMatch = part.match(/<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
+                if (!titleMatch)
+                    continue;
+                let title = titleMatch[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+                // Clean up common " - YouTube" suffixes
+                title = title.replace(/\s*-\s*YouTube$/i, "");
+                const hrefMatch = titleMatch[0].match(/href="([^"]+)"/);
+                if (!hrefMatch)
+                    continue;
+                let rawUrl = hrefMatch[1];
+                if (rawUrl.startsWith("//"))
+                    rawUrl = "https:" + rawUrl;
+                let actualUrl = rawUrl;
+                try {
+                    const u = new URL(rawUrl);
+                    actualUrl = decodeURIComponent(u.searchParams.get("uddg") || rawUrl);
+                }
+                catch {
+                    /* keep rawUrl */
+                }
+                // Only accept actual youtube.com/watch URLs
+                if (!actualUrl.includes("youtube.com/watch"))
+                    continue;
+                let videoId = "";
+                try {
+                    const u = new URL(actualUrl);
+                    videoId = u.searchParams.get("v") || "";
+                }
+                catch { }
+                if (!videoId)
+                    continue;
+                const description = snippetMatch
+                    ? snippetMatch[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()
+                    : "";
+                results.push({
+                    id: `youtube_${videoId}`,
+                    title,
+                    url: actualUrl,
+                    source: "youtube",
+                    type: "video",
+                    thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                    description: description || undefined,
+                    author: "YouTube (Fallback)",
+                    tags: ["youtube", "learning"],
+                    language: "en",
+                    metadata: {},
+                    createdAt: new Date(),
+                });
+            }
+        }
+        catch (err) {
+            console.warn("[YouTube] DDG fallback error:", err instanceof Error ? err.message : String(err));
+        }
+        return results;
     }
 }
 exports.YouTubeProvider = YouTubeProvider;
