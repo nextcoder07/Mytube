@@ -61,8 +61,16 @@ export class SearchService {
         console.error("Failed to persist content:", err.message)
       );
     }
-    const limit = options?.limit || 100;
-    const sliced = ranked.slice(0, limit);
+
+    const limit = options?.limit || 70;
+
+    // 5. Source-diversity interleaving:
+    //    Ensures all active providers appear in the result set so YouTube (and others)
+    //    are never crowded out by pure relevance scoring.
+    //    Strategy: allocate at least `minPerSource` slots per active source,
+    //    then fill the rest with the top-ranked items globally.
+    const sliced = this.interleaveBySource(ranked, providers, limit);
+
     if ((sliced || []).length === 0) {
       console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
     }
@@ -155,6 +163,68 @@ Schema:
     }
 
     return results;
+  }
+
+  /**
+   * Interleave results by source so every active provider is represented.
+   * - Each source gets at least min(minPerSource, available) slots.
+   * - Remaining slots filled by globally top-ranked items (dedup by URL).
+   */
+  private static interleaveBySource(
+    ranked: Content[],
+    providers: string[],
+    limit: number
+  ): Content[] {
+    // Group ranked items by source (preserving rank order within each group)
+    const bySource = new Map<string, Content[]>();
+    providers.forEach((p) => bySource.set(p.toLowerCase(), []));
+    ranked.forEach((item) => {
+      const key = item.source.toLowerCase();
+      if (bySource.has(key)) bySource.get(key)!.push(item);
+    });
+
+    const activeProviders = providers.filter((p) => (bySource.get(p.toLowerCase()) || []).length > 0);
+    if (activeProviders.length === 0) return ranked.slice(0, limit);
+
+    // Give each provider at least 3 guaranteed slots (or fewer if limit is small)
+    const minPerSource = Math.max(3, Math.floor(limit / (activeProviders.length * 2)));
+    const reserved = Math.min(minPerSource * activeProviders.length, Math.floor(limit * 0.6));
+
+    const usedUrls = new Set<string>();
+    const result: Content[] = [];
+
+    // Round-robin fill the reserved slots
+    const providerQueues = activeProviders.map((p) => [...(bySource.get(p.toLowerCase()) || [])]);
+    let added = 0;
+    let round = 0;
+    while (added < reserved) {
+      let anyLeft = false;
+      for (let i = 0; i < providerQueues.length && added < reserved; i++) {
+        const queue = providerQueues[i];
+        // Each provider gets minPerSource items in the reserved block
+        const alreadyFromSource = result.filter((r) => r.source.toLowerCase() === activeProviders[i].toLowerCase()).length;
+        if (alreadyFromSource >= minPerSource) continue;
+        if (queue[round] && !usedUrls.has(queue[round].url)) {
+          usedUrls.add(queue[round].url);
+          result.push(queue[round]);
+          added++;
+          anyLeft = true;
+        }
+      }
+      round++;
+      if (!anyLeft || round > 200) break;
+    }
+
+    // Fill remaining slots with top globally-ranked items not yet included
+    for (const item of ranked) {
+      if (result.length >= limit) break;
+      if (!usedUrls.has(item.url)) {
+        usedUrls.add(item.url);
+        result.push(item);
+      }
+    }
+
+    return result;
   }
 
   /**
