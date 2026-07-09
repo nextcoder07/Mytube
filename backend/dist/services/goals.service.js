@@ -31,6 +31,7 @@ class GoalsService {
             difficulty: goalData.difficulty || "beginner",
             target_date: goalData.targetDate,
             status: "active",
+            use_in_search: goalData.useInSearch !== undefined ? goalData.useInSearch : true,
         })
             .select()
             .single();
@@ -52,6 +53,8 @@ class GoalsService {
             dbUpdates.target_date = updates.targetDate;
         if (updates.status !== undefined)
             dbUpdates.status = updates.status;
+        if (updates.useInSearch !== undefined)
+            dbUpdates.use_in_search = updates.useInSearch;
         const { data, error } = await supabase_1.supabase
             .from("goals")
             .update(dbUpdates)
@@ -93,8 +96,16 @@ class GoalsService {
         const learningStyle = userWithProfile.profile?.learning_style || "mixed";
         const timePerWeek = options?.timePerWeek || 5; // default 5 hours/week
         // 3. Compile prompt
+        let goalDescription = goal.description || "";
+        try {
+            const json = JSON.parse(goal.description);
+            goalDescription = `${json.describe || ""}. Priorities: 1. ${json.priority1 || ""}, 2. ${json.priority2 || ""}, 3. ${json.priority3 || ""}`;
+        }
+        catch (e) {
+            // not JSON, keep as is
+        }
         const prompt = (0, prompt_1.buildPrompt)("roadmap", {
-            goal: `${goal.title}. ${goal.description || ""}`,
+            goal: `${goal.title}. ${goalDescription}`,
             level: difficulty,
             timePerWeek: timePerWeek.toString(),
             targetDate: goal.target_date || "3 months from now",
@@ -154,6 +165,47 @@ class GoalsService {
         if (error)
             throw error;
         return data;
+    }
+    /**
+     * Build a context string from all the user's goals that have useInSearch enabled.
+     * This string is injected into the search ranker to boost goal-relevant results.
+     */
+    static async getActiveGoalContext(userId) {
+        const { data, error } = await supabase_1.supabase
+            .from("goals")
+            .select("title, description, category")
+            .eq("user_id", userId)
+            .eq("use_in_search", true)
+            .eq("status", "active");
+        if (error || !data || data.length === 0)
+            return "";
+        // Build a compact context string from all matching goals
+        return data
+            .map((g) => {
+            let text = `Goal: ${g.title}`;
+            if (g.description) {
+                try {
+                    const json = JSON.parse(g.description);
+                    const parts = [];
+                    if (json.describe)
+                        parts.push(json.describe);
+                    if (json.priority1)
+                        parts.push(`Priority 1: ${json.priority1}`);
+                    if (json.priority2)
+                        parts.push(`Priority 2: ${json.priority2}`);
+                    if (json.priority3)
+                        parts.push(`Priority 3: ${json.priority3}`);
+                    text += `. ${parts.join(". ")}`;
+                }
+                catch {
+                    text += `. ${g.description}`;
+                }
+            }
+            if (g.category)
+                text += `. Category: ${g.category}`;
+            return text;
+        })
+            .join(" | ");
     }
 }
 exports.GoalsService = GoalsService;

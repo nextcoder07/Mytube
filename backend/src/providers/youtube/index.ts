@@ -83,6 +83,13 @@ export class YouTubeProvider implements ContentProvider {
   name = "youtube";
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
+    // Detect if searching for a YouTube channel
+    const isChannelSearch = this.isChannelQuery(query);
+    
+    if (isChannelSearch) {
+      return await this.searchChannel(query, options?.limit || 20);
+    }
+
     if (!keyManager.hasKeys()) {
       console.warn("YouTube API Key(s) not set. Falling back to DuckDuckGo scraper.");
       return this.searchViaDDG(query, options?.limit || 20);
@@ -331,6 +338,160 @@ export class YouTubeProvider implements ContentProvider {
       console.warn("[YouTube] DDG fallback error:", err instanceof Error ? err.message : String(err));
     }
     return results;
+  }
+
+  /**
+   * Detect if query is for a YouTube channel
+   */
+  private isChannelQuery(query: string): boolean {
+    return (
+      /^@[a-zA-Z0-9_]+$/.test(query) ||
+      /youtube\.com\/@[a-zA-Z0-9_]+\/?$/.test(query) ||
+      /youtube\s+channel|yt\s+channel|channel\s+@/i.test(query) ||
+      /channel:\s*@?[a-zA-Z0-9_]+/i.test(query)
+    );
+  }
+
+  /**
+   * Extract channel handle from query
+   */
+  private extractChannelHandle(query: string): string {
+    const atMatch = query.match(/^@([a-zA-Z0-9_]+)/);
+    if (atMatch) return atMatch[1];
+
+    const urlMatch = query.match(/youtube\.com\/@([a-zA-Z0-9_]+)/);
+    if (urlMatch) return urlMatch[1];
+
+    const channelMatch = query.match(/channel:\s*@?([a-zA-Z0-9_]+)/i);
+    if (channelMatch) return channelMatch[1];
+
+    const descMatch = query.match(/channel\s+@?([a-zA-Z0-9_]+)/i);
+    if (descMatch) return descMatch[1];
+
+    return query.replace(/[@\s]/g, "").substring(0, 30);
+  }
+
+  /**
+   * Search for a YouTube channel and its videos
+   */
+  private async searchChannel(query: string, limit: number): Promise<Content[]> {
+    const channelHandle = this.extractChannelHandle(query);
+    const results: Content[] = [];
+
+    try {
+      const activeKey = keyManager.getKey();
+      if (!activeKey) {
+        console.warn("No YouTube API keys available for channel search");
+        return [];
+      }
+
+      // 1. Search for the channel by handle
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelHandle)}&maxResults=1&key=${activeKey}`;
+      const searchRes = await fetch(searchUrl);
+
+      if (!searchRes.ok) {
+        console.warn(`YouTube channel search failed: ${searchRes.status}`);
+        return [];
+      }
+
+      const searchData = await searchRes.json() as Record<string, unknown>;
+      const channelItems = (searchData.items || []) as Record<string, unknown>[];
+
+      if (channelItems.length === 0) {
+        console.warn(`YouTube channel not found: ${channelHandle}`);
+        return [];
+      }
+
+      const channelItem = channelItems[0];
+      const snippet = channelItem.snippet as Record<string, unknown>;
+      const channelId = (channelItem.id as Record<string, unknown>)?.channelId as string;
+
+      // 2. Add channel info as first result
+      results.push({
+        id: `youtube_channel_${channelId}`,
+        title: `${snippet.title} - YouTube Channel`,
+        url: `https://www.youtube.com/channel/${channelId}`,
+        source: "youtube",
+        type: "channel",
+        thumbnail: (snippet.thumbnails as Record<string, Record<string, string>> | undefined)?.high?.url,
+        description: snippet.description as string,
+        author: snippet.title as string,
+        tags: ["youtube", "channel", channelHandle],
+        language: "en",
+        metadata: {
+          channelId,
+          handle: channelHandle,
+        },
+        createdAt: new Date(snippet.publishedAt as string),
+      });
+
+      // 3. Fetch channel's latest videos
+      const videosUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(channelId)}&order=date&type=video&maxResults=${Math.min(limit - 1, 25)}&key=${activeKey}`;
+      const videosRes = await fetch(videosUrl);
+
+      if (videosRes.ok) {
+        const videosData = await videosRes.json() as Record<string, unknown>;
+        const videoItems = (videosData.items || []) as Record<string, unknown>[];
+        const videoIds = videoItems
+          .map(item => {
+            const id = item.id as Record<string, unknown>;
+            return id?.videoId as string;
+          })
+          .filter(Boolean);
+
+        // Fetch video details (duration, views)
+        if (videoIds.length > 0) {
+          const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds.join(",")}&key=${activeKey}`;
+          const detailsRes = await fetch(detailsUrl);
+
+          const detailsMap: Record<string, { duration: number; views: number }> = {};
+          if (detailsRes.ok) {
+            const detailsData = await detailsRes.json() as Record<string, unknown>;
+            const detailItems = (detailsData.items || []) as Record<string, unknown>[];
+            detailItems.forEach(item => {
+              const contentDetails = item.contentDetails as Record<string, unknown> | undefined;
+              const statistics = item.statistics as Record<string, unknown> | undefined;
+              detailsMap[item.id as string] = {
+                duration: this.parseISO8601Duration(contentDetails?.duration as string),
+                views: parseInt((statistics?.viewCount as string) || "0", 10),
+              };
+            });
+          }
+
+          // Add videos to results
+          videoItems.forEach(item => {
+            const itemSnippet = item.snippet as Record<string, unknown>;
+            const videoId = (item.id as Record<string, unknown>)?.videoId as string;
+            const details = detailsMap[videoId] || { duration: 0, views: 0 };
+
+            results.push({
+              id: `youtube_${videoId}`,
+              title: itemSnippet.title as string,
+              url: `https://www.youtube.com/watch?v=${videoId}`,
+              source: "youtube",
+              type: "video",
+              thumbnail: (itemSnippet.thumbnails as Record<string, Record<string, string>> | undefined)?.high?.url,
+              description: itemSnippet.description as string,
+              author: channelHandle,
+              duration: details.duration,
+              viewCount: details.views,
+              tags: ["youtube", "video", channelHandle],
+              language: "en",
+              metadata: {
+                channelId,
+                channel: channelHandle,
+              },
+              createdAt: new Date(itemSnippet.publishedAt as string),
+            });
+          });
+        }
+      }
+
+      return results.slice(0, limit);
+    } catch (err: any) {
+      console.error("YouTube channel search error:", err.message);
+      return [];
+    }
   }
 }
 

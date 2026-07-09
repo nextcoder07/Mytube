@@ -6,7 +6,7 @@ export interface Content {
   title: string;
   url: string;
   source: "youtube" | "github" | "reddit" | "medium" | "website";
-  type: "video" | "article" | "repo" | "post" | "course";
+  type: "video" | "article" | "repo" | "post" | "course" | "channel" | "profile";
   thumbnail?: string;
   description?: string;
   author?: string;
