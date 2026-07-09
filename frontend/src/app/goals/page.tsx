@@ -72,11 +72,13 @@ export default function GoalsPage() {
       setCategory("General");
       setDifficulty("beginner");
       setTargetDate("");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to create goal:", err);
-      setFormError(
-        err?.message || "Unable to save goal right now. Please try again."
-      );
+      const message =
+        err && typeof err === "object" && "message" in err && typeof (err as { message?: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : "Unable to save goal right now. Please try again.";
+      setFormError(message);
     }
   };
 
