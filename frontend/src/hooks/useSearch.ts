@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { Content } from '../types/content';
 
-const BATCH_SIZE = 70; // fetch at least 70 items per source initially (minimum extendable size)
-const LOAD_MORE_STEP = 70; // subsequent batches fetch another 70 results to maintain consistency
+const BATCH_SIZE = 70; // visible page size
+const INITIAL_YT = 100; // initial YouTube seed size
+const LOAD_MORE_STEP = 70; // normal subsequent batch size
+const FALLBACK_LOAD_MORE_STEP = 50; // reduced batch when token/quota constraints
 
 export type SearchResponseMeta = {
   youtubeStatus?: {
@@ -101,11 +103,10 @@ export function useSearch() {
 
   // Removed: clearing the full search cache on mount was previously performed here.
 
-  // After each fetch, check if we got fewer results than the limit (meaning no more to load)
-  if (results.length > 0 && results.length !== prevResultCountRef.current) {
+  // Keep "Load more" available by default. Only stop when zero results are returned.
+  if (results.length >= 0 && results.length !== prevResultCountRef.current) {
     prevResultCountRef.current = results.length;
-    const currentLimit = params?.limit || BATCH_SIZE;
-    if (results.length < currentLimit) {
+    if (results.length === 0) {
       if (hasMore) setHasMore(false);
     } else {
       if (!hasMore) setHasMore(true);
@@ -122,16 +123,20 @@ export function useSearch() {
       // If this is a YouTube-only search, seed with 100 results first
       const providers = newParams.providers || '';
       const isYouTubeOnly = providers && providers.split(',').map(p => p.trim().toLowerCase()).length === 1 && providers.toLowerCase().includes('youtube');
-      const initialLimit = isYouTubeOnly ? 100 : BATCH_SIZE;
+      const initialLimit = isYouTubeOnly ? INITIAL_YT : BATCH_SIZE;
       return { ...newParams, limit: initialLimit };
     });
   }, []);
 
   const loadMore = useCallback(() => {
-    if (!params || !hasMore || isFetching) return;
+    if (!params || isFetching) return;
+    const providers = params.providers || '';
+    const isYouTubeOnly = providers && providers.split(',').map(p => p.trim().toLowerCase()).length === 1 && providers.toLowerCase().includes('youtube');
     const currentLimit = params.limit || BATCH_SIZE;
-    setParams({ ...params, limit: currentLimit + LOAD_MORE_STEP });
-  }, [params, hasMore, isFetching]);
+    // If YouTube keys are exhausted (quota), reduce next batch size to save tokens
+    const step = (isYouTubeOnly && (responseMeta?.youtubeStatus?.limitReached)) ? FALLBACK_LOAD_MORE_STEP : LOAD_MORE_STEP;
+    setParams({ ...params, limit: currentLimit + step });
+  }, [params, isFetching, responseMeta]);
 
   const loadPrevious = useCallback(() => {
     if (!params || isFetching) return;

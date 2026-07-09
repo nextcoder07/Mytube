@@ -142,7 +142,18 @@ export const suggestionsBefore = async (req: Request, res: Response, next: NextF
     const beforeTerms = ['introduction', 'basics', 'prerequisite', 'part 1', 'previous', 'overview', 'beginner guide'];
     const beforeQuery = `${base} ${beforeTerms.join(' OR ')}`.trim();
 
-    const results = await SearchService.search(userId, beforeQuery, { providers, limit });
+    let results = await SearchService.search(userId, beforeQuery, { providers, limit });
+
+    // Boost items that match both the user's search query and the content title
+    const qTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const titleTokens = contentTitle.toLowerCase().split(/\s+/).filter(Boolean);
+    results = results.map((item) => {
+      const txt = (item.title + ' ' + (item.description || '')).toLowerCase();
+      const matchesQ = qTokens.some(t => txt.includes(t));
+      const matchesTitle = titleTokens.some(t => txt.includes(t));
+      return { item, boost: matchesQ && matchesTitle ? 1 : 0 };
+    }).sort((a, b) => b.boost - a.boost).map(r => r.item);
+
     res.status(200).json(success(results, 'Suggestions (before) fetched'));
   } catch (err: any) {
     next(err);
@@ -166,7 +177,18 @@ export const suggestionsAfter = async (req: Request, res: Response, next: NextFu
     const afterTerms = ['follow up', 'part 2', 'next', 'advanced', 'deep dive', 'continued'];
     const afterQuery = `${baseAfter} ${afterTerms.join(' OR ')}`.trim();
 
-    const results = await SearchService.search(userId, afterQuery, { providers, limit });
+    let results = await SearchService.search(userId, afterQuery, { providers, limit });
+
+    // Boost items that match both the user's search query and the content title
+    const qTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const titleTokens = contentTitle.toLowerCase().split(/\s+/).filter(Boolean);
+    results = results.map((item) => {
+      const txt = (item.title + ' ' + (item.description || '')).toLowerCase();
+      const matchesQ = qTokens.some(t => txt.includes(t));
+      const matchesTitle = titleTokens.some(t => txt.includes(t));
+      return { item, boost: matchesQ && matchesTitle ? 1 : 0 };
+    }).sort((a, b) => b.boost - a.boost).map(r => r.item);
+
     res.status(200).json(success(results, 'Suggestions (after) fetched'));
   } catch (err: any) {
     next(err);
