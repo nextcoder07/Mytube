@@ -24,9 +24,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   const idToken = authHeader.split(" ")[1];
   try {
+    if (config.nodeEnv === "development") {
+      console.debug("[auth] Authorization header present (dev). Verifying token...");
+    }
     const decoded = await firebaseAuth.verifyIdToken(idToken);
     // Attach user info to request
     (req as any).user = { uid: decoded.uid, email: decoded.email };
+    if (config.nodeEnv === "development") {
+      console.debug(`[auth] Token verified. uid=${decoded.uid}, email=${decoded.email}`);
+    }
     next();
   } catch (err) {
     if (config.nodeEnv === "development" || isPlaceholderKey) {
@@ -34,7 +40,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       (req as any).user = { uid: "mock-user-123", email: "mock@example.com" };
       return next();
     }
-    console.error("Firebase auth error:", err);
+    const errMsg = err && typeof err === 'object' && 'message' in err ? (err as any).message : String(err);
+    console.error("Firebase auth error:", errMsg);
     next(new HttpError(401, "Invalid Firebase ID token"));
   }
 };
