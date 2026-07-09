@@ -6,7 +6,12 @@ export class RedditProvider implements ContentProvider {
   name = "reddit";
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
-    const limit = options?.limit || 50; // Increased from 25 to 50
+    if (!process.env.REDDIT_CLIENT_ID || !process.env.REDDIT_CLIENT_SECRET) {
+      console.warn("[Reddit] Reddit API credentials are not configured. Reddit search is disabled.");
+      return [];
+    }
+
+    const limit = options?.limit || 100;
     
     try {
       const totalToFetch = limit;

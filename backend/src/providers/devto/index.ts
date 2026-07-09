@@ -14,6 +14,7 @@ export class DevToProvider implements ContentProvider {
     const limit = options?.limit || 30;
 
     try {
+      const limit = options?.limit || 100;
       // Free public endpoint without API key, rate limit is generous but we should still respect reasonable limits.
       const url = `https://dev.to/api/articles?search=${encodeURIComponent(query)}&per_page=${limit}`;
       const res = await fetch(url, {
@@ -34,7 +35,7 @@ export class DevToProvider implements ContentProvider {
           id: `devto_${item.id}`,
           title: item.title,
           url: item.url,
-          source: "website", // Or "devto" if we want to expand the union type in Content, but "website" or "medium"-like is fine. Let's use "website" to avoid type errors in the model for now, but we tag it as devto.
+          source: "devto",
           type: "article",
           thumbnail: item.cover_image || item.social_image,
           description: item.description,

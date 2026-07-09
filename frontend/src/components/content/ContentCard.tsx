@@ -24,6 +24,8 @@ export default function ContentCard({
     reddit: "bg-orange-500/10 text-orange-500 border border-orange-500/20",
     medium: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
     website: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    devto: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+    wikipedia: "bg-yellow-500/10 text-yellow-300 border border-yellow-500/20",
   };
 
   const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {

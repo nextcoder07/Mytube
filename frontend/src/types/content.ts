@@ -4,7 +4,7 @@ export interface Content {
   id: string;
   title: string;
   url: string;
-  source: "youtube" | "github" | "reddit" | "medium" | "website";
+  source: "youtube" | "github" | "reddit" | "medium" | "website" | "devto" | "wikipedia";
   type: "video" | "article" | "repo" | "post" | "course";
   thumbnail?: string;
   description?: string;

@@ -10,7 +10,7 @@ export class WikipediaProvider implements ContentProvider {
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     const results: Content[] = [];
-    const limit = Math.min(options?.limit || 10, 15); // Keep wiki results small but precise
+    const limit = Math.min(options?.limit || 50, 50);
 
     try {
       const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
@@ -39,7 +39,7 @@ export class WikipediaProvider implements ContentProvider {
           id: `wiki_${item.pageid}`,
           title: item.title,
           url: `https://en.wikipedia.org/?curid=${item.pageid}`,
-          source: "website", // Map to allowed Content enum
+          source: "wikipedia",
           type: "article",
           description: description,
           author: "Wikipedia",

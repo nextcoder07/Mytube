@@ -29,7 +29,7 @@ export default function SearchPage() {
   const [aiMode, setAiMode] = useState(false);
   const [aiContext, setAiContext] = useState('');
   const ALL_PROVIDERS = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(ALL_PROVIDERS);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(["youtube"]);
   const [filters, setFilters] = useState<SearchFiltersState>({
     order: 'relevance',
     videoDuration: 'any',
@@ -65,10 +65,7 @@ export default function SearchPage() {
   };
 
   const handleToggleProvider = (id: string) => {
-    setSelectedProviders((prev) => {
-      if (prev.includes(id)) return prev.filter((p) => p !== id);
-      return [...prev, id];
-    });
+    setSelectedProviders([id]);
   };
 
   const handleFilterChange = (key: keyof SearchFiltersState, value: string) => {
