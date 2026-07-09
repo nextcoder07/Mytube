@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 // src/components/player/GlobalPlayer.tsx
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { usePlayerStore } from "../../store/player.store";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
@@ -13,6 +13,8 @@ import {
   DocumentPlusIcon,
   BookmarkIcon,
   PlayIcon,
+  ClockIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import ContentDetail from "../content/ContentDetail";
 import type { Content } from "../../types/content";
@@ -62,19 +64,20 @@ function HScrollRow({
   onPlay,
   badge,
   accent = "violet",
+  emptyText,
 }: {
   title: string;
   items: Content[];
   onPlay: (item: Content) => void;
   badge?: string;
-  accent?: "violet" | "fuchsia" | "indigo";
+  accent?: "violet" | "fuchsia" | "indigo" | "cyan";
+  emptyText?: string;
 }) {
-  if (items.length === 0) return null;
-
   const accentClasses: Record<string, string> = {
     violet: "text-violet-400 border-violet-500/40",
     fuchsia: "text-fuchsia-400 border-fuchsia-500/40",
     indigo: "text-indigo-400 border-indigo-500/40",
+    cyan: "text-cyan-400 border-cyan-500/40",
   };
 
   return (
@@ -82,15 +85,18 @@ function HScrollRow({
       <h2 className={`text-xs font-bold uppercase tracking-widest mb-3 border-l-2 pl-2 ${accentClasses[accent]}`}>
         {title}
       </h2>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-        {items.map((item) => (
-          <MiniCard key={item.id} item={item} onClick={() => onPlay(item)} badge={badge} />
-        ))}
-      </div>
+      {items.length > 0 ? (
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+          {items.map((item) => (
+            <MiniCard key={item.id} item={item} onClick={() => onPlay(item)} badge={badge} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-600 italic pl-2">{emptyText || "Nothing here yet."}</p>
+      )}
     </div>
   );
 }
-
 
 
 // ─── YouTube-style vertical sidebar card ─────────────────────────────────────
@@ -100,7 +106,8 @@ function SidebarMiniCard({ item, onClick }: { item: Content; onClick: () => void
       onClick={onClick}
       className="flex gap-3 p-2 rounded-xl hover:bg-gray-800/60 cursor-pointer group transition-colors"
     >
-      <div className="relative w-36 sm:w-40 aspect-video flex-shrink-0 rounded-lg overflow-hidden bg-gray-800">
+      {/* Responsive thumbnail: larger on mobile, tighter on desktop */}
+      <div className="relative w-32 min-[400px]:w-40 sm:w-44 lg:w-36 xl:w-40 aspect-video flex-shrink-0 rounded-lg overflow-hidden bg-gray-800">
         {item.thumbnail ? (
           <img
             src={item.thumbnail}
@@ -124,6 +131,31 @@ function SidebarMiniCard({ item, onClick }: { item: Content; onClick: () => void
   );
 }
 
+// ─── Persistent YouTube Embed ────────────────────────────────────────────────
+// This component uses instanceId as key so it only remounts when content changes,
+// NOT on minimize/maximize.
+function YouTubeEmbed({
+  videoId,
+  instanceId,
+  className,
+}: {
+  videoId: string;
+  instanceId: string;
+  className?: string;
+}) {
+  return (
+    <iframe
+      key={instanceId}
+      className={className || "w-full h-full"}
+      src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+      title="YouTube video player"
+      frameBorder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowFullScreen
+    />
+  );
+}
+
 // ─── Main GlobalPlayer ────────────────────────────────────────────────────────
 export default function GlobalPlayer() {
   const {
@@ -132,10 +164,12 @@ export default function GlobalPlayer() {
     minimize,
     maximize,
     closePlayer,
-    queue,
     play,
     history,
+    watchLater,
     goBackVideo,
+    toggleWatchLater,
+    instanceId,
   } = usePlayerStore();
   const { isAuthenticated } = useAuth();
   const [showSummary, setShowSummary] = useState(false);
@@ -153,7 +187,6 @@ export default function GlobalPlayer() {
     async function fetchRelated() {
       setIsFetchingRelated(true);
       try {
-        // Build a query from title to get related content
         const query = activeContent!.title.replace(/[^\w\s]/gi, ' ').trim();
         const goal = localStorage.getItem("mytube_ai_context") || "";
         const res = await api.get("/search", { 
@@ -161,7 +194,6 @@ export default function GlobalPlayer() {
         });
         
         if (isMounted) {
-          // Filter out the currently playing video
           const filtered = (res.data.data as Content[]).filter(c => c.id !== activeContent!.id);
           setRelatedContent(filtered);
         }
@@ -198,13 +230,6 @@ export default function GlobalPlayer() {
     window.setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  if (!activeContent) return null;
-
-  // ── Derive queue partitions ──────────────────────────────────────────────
-  const currentIndex = queue.findIndex((c) => c.id === activeContent.id);
-  const prevItems = currentIndex > 0 ? queue.slice(0, currentIndex) : [];
-  const nextItems = currentIndex !== -1 ? queue.slice(currentIndex + 1) : queue;
-
   // ── YouTube helper ────────────────────────────────────────────────────────
   const getYoutubeVideoId = (url: string) => {
     try {
@@ -215,8 +240,69 @@ export default function GlobalPlayer() {
     return null;
   };
 
-  const isYouTube = activeContent.source === "youtube";
-  const videoId = isYouTube ? getYoutubeVideoId(activeContent.url) : null;
+  // Memoize so it doesn't recalculate on every render
+  const isYouTube = activeContent?.source === "youtube";
+  const videoId = useMemo(
+    () => (isYouTube && activeContent ? getYoutubeVideoId(activeContent.url) : null),
+    [activeContent?.url, isYouTube]
+  );
+
+  // Check if current item is in Watch Later
+  const isInWatchLater = activeContent
+    ? watchLater.some((c) => c.id === activeContent.id)
+    : false;
+
+  // "Previously Watched" — deduplicated from history, most recent first, exclude current
+  const previouslyWatched = useMemo(() => {
+    if (!activeContent) return [];
+    const seen = new Set<string>();
+    const result: Content[] = [];
+    // history is oldest → newest; reverse to get most recent first
+    for (let i = history.length - 1; i >= 0; i--) {
+      const item = history[i];
+      if (item.id !== activeContent.id && !seen.has(item.id)) {
+        seen.add(item.id);
+        result.push(item);
+      }
+    }
+    return result;
+  }, [history, activeContent?.id]);
+
+  // "Watch Later" — exclude currently playing
+  const watchLaterFiltered = useMemo(() => {
+    if (!activeContent) return watchLater;
+    return watchLater.filter((c) => c.id !== activeContent.id);
+  }, [watchLater, activeContent?.id]);
+
+  if (!activeContent) return null;
+
+  // ── Build the iframe/content element ONCE, and reuse it ──────────────────
+  const playerContent = isYouTube && videoId ? (
+    <YouTubeEmbed
+      videoId={videoId}
+      instanceId={instanceId || `yt-${videoId}`}
+      className="w-full h-full"
+    />
+  ) : (
+    <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white select-none">
+      <div className="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+        {activeContent.thumbnail ? (
+          <img src={activeContent.thumbnail} alt={activeContent.title} className="w-32 h-32 mx-auto rounded-2xl object-cover border border-slate-800 shadow-xl" />
+        ) : (
+          <div className="w-24 h-24 mx-auto rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+            <SparklesIcon className="w-12 h-12" />
+          </div>
+        )}
+        <span className="px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[11px] font-bold uppercase tracking-wider">{activeContent.source}</span>
+        <h3 className="text-xl md:text-2xl font-extrabold line-clamp-2 leading-tight">{activeContent.title}</h3>
+        <a href={activeContent.url} target="_blank" rel="noopener noreferrer"
+          className="w-full max-w-sm mx-auto py-3 px-6 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-violet-600/25">
+          Open in New Tab
+        </a>
+      </div>
+    </div>
+  );
 
   // ─── PIP / Minimized ─────────────────────────────────────────────────────
   if (isMinimized) {
@@ -234,13 +320,7 @@ export default function GlobalPlayer() {
           </div>
         </div>
         <div className="aspect-video bg-black">
-          {isYouTube && videoId ? (
-            <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${videoId}?autoplay=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-950 text-gray-400 text-xs p-4 text-center">
-              {activeContent.title}
-            </div>
-          )}
+          {playerContent}
         </div>
       </div>
     );
@@ -266,41 +346,14 @@ export default function GlobalPlayer() {
         </div>
       </div>
 
-      {/* Main Grid: Left is Video + Details + Queue. Right is Vertical "More Like This" */}
+      {/* Main Grid: Left is Video + Details + Watch Later/History.
+          Right is Vertical "More Like This" — on mobile, it flows below */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto w-full pb-20">
         {/* Left Pane (8 Columns on desktop) */}
         <div className="lg:col-span-8 space-y-6">
           {/* Player embed - Aspect Video */}
           <div className="w-full bg-black aspect-video rounded-2xl overflow-hidden relative shadow-2xl border border-gray-800">
-            {isYouTube && videoId ? (
-              <iframe
-                className="w-full h-full"
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white select-none">
-                <div className="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
-                  {activeContent.thumbnail ? (
-                    <img src={activeContent.thumbnail} alt={activeContent.title} className="w-32 h-32 mx-auto rounded-2xl object-cover border border-slate-800 shadow-xl" />
-                  ) : (
-                    <div className="w-24 h-24 mx-auto rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                      <SparklesIcon className="w-12 h-12" />
-                    </div>
-                  )}
-                  <span className="px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 text-[11px] font-bold uppercase tracking-wider">{activeContent.source}</span>
-                  <h3 className="text-xl md:text-2xl font-extrabold line-clamp-2 leading-tight">{activeContent.title}</h3>
-                  <a href={activeContent.url} target="_blank" rel="noopener noreferrer"
-                    className="w-full max-w-sm mx-auto py-3 px-6 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-violet-600/25">
-                    Open in New Tab
-                  </a>
-                </div>
-              </div>
-            )}
+            {playerContent}
           </div>
 
           {/* Content Info & Actions */}
@@ -324,8 +377,23 @@ export default function GlobalPlayer() {
                 <button className="flex items-center gap-1.5 px-3.5 py-1.5 bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 text-pink-400 hover:text-white rounded-xl text-xs font-semibold transition-colors">
                   <DocumentPlusIcon className="w-4 h-4" /> Note
                 </button>
+                {/* Watch Later toggle button */}
+                <button
+                  onClick={() => toggleWatchLater(activeContent)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors border ${
+                    isInWatchLater
+                      ? "bg-cyan-600/20 border-cyan-500/30 text-cyan-400 hover:bg-cyan-600/30 hover:text-cyan-300"
+                      : "bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  }`}
+                >
+                  {isInWatchLater ? (
+                    <><CheckIcon className="w-4 h-4" /> In Watch Later</>
+                  ) : (
+                    <><ClockIcon className="w-4 h-4" /> Watch Later</>
+                  )}
+                </button>
                 <button onClick={handleSaveToPlaylist}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-805 hover:bg-gray-800 text-gray-200 hover:text-white rounded-xl text-xs font-semibold transition-colors border border-gray-700">
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-gray-200 hover:text-white rounded-xl text-xs font-semibold transition-colors border border-gray-700">
                   <BookmarkIcon className="w-4 h-4" /> Save
                 </button>
               </div>
@@ -338,26 +406,30 @@ export default function GlobalPlayer() {
             )}
           </div>
 
-          {/* Queue Rows */}
+          {/* Watch Later & Previously Watched Rows */}
           <div className="space-y-4">
             <HScrollRow
-              title="▶ Up Next in Queue"
-              items={nextItems}
+              title="🕐 Watch Later"
+              items={watchLaterFiltered}
               onPlay={play}
-              accent="violet"
+              accent="cyan"
+              emptyText="Add items to your Watch Later list using the clock button above."
             />
 
             <HScrollRow
-              title="⏮ Previously Played"
-              items={prevItems}
+              title="⏮ Previously Watched"
+              items={previouslyWatched}
               onPlay={play}
-              badge="prev"
+              badge="watched"
               accent="indigo"
+              emptyText="Your viewing history will appear here."
             />
           </div>
         </div>
 
-        {/* Right Pane: Vertical YouTube-style "More Like This" (4 Columns on desktop) */}
+        {/* Right Pane: Vertical YouTube-style "More Like This"
+            On mobile (< lg), this naturally flows below all content.
+            On desktop (lg+), it sits in the right 4 columns. */}
         <div className="lg:col-span-4 space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-fuchsia-400 border-l-2 border-fuchsia-500/40 pl-2 flex items-center gap-1.5">
             <SparklesIcon className="w-4 h-4 animate-pulse" />
@@ -368,7 +440,7 @@ export default function GlobalPlayer() {
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex gap-3 p-2 animate-pulse">
-                  <div className="w-36 aspect-video bg-gray-800/50 rounded-lg" />
+                  <div className="w-32 min-[400px]:w-40 sm:w-44 lg:w-36 xl:w-40 aspect-video bg-gray-800/50 rounded-lg flex-shrink-0" />
                   <div className="flex-1 space-y-2 py-1">
                     <div className="h-3 bg-gray-800/50 rounded w-5/6" />
                     <div className="h-3 bg-gray-800/50 rounded w-1/2" />
@@ -377,7 +449,7 @@ export default function GlobalPlayer() {
               ))}
             </div>
           ) : relatedContent.length > 0 ? (
-            <div className="flex flex-col gap-2 divide-y divide-gray-800/40 max-h-[85vh] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 divide-y divide-gray-800/40 lg:max-h-[85vh] lg:overflow-y-auto lg:pr-1">
               {relatedContent.map((item) => (
                 <SidebarMiniCard key={item.id} item={item} onClick={() => play(item)} />
               ))}
