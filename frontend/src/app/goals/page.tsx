@@ -35,10 +35,18 @@ export default function GoalsPage() {
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("beginner");
   const [targetDate, setTargetDate] = useState("");
   const [activeRoadmap, setActiveRoadmap] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setFormError(null);
+    setFormSuccess(null);
+
+    if (!title.trim()) {
+      setFormError("Please enter a title for your goal.");
+      return;
+    }
 
     const serializedDescription = JSON.stringify({
       describe: description,
@@ -55,7 +63,7 @@ export default function GoalsPage() {
         difficulty,
         targetDate: targetDate || undefined,
       });
-      setIsModalOpen(false);
+      setFormSuccess("Goal added successfully!");
       setTitle("");
       setDescription("");
       setPriority1("");
@@ -64,8 +72,11 @@ export default function GoalsPage() {
       setCategory("General");
       setDifficulty("beginner");
       setTargetDate("");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create goal:", err);
+      setFormError(
+        err?.message || "Unable to save goal right now. Please try again."
+      );
     }
   };
 
@@ -347,128 +358,141 @@ export default function GoalsPage() {
       {/* Goal creation modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-gray-950 border border-gray-850 rounded-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-white">Create New Learning Goal</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-gray-950 border border-gray-850 rounded-2xl max-w-3xl w-full p-6 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Goal Title
-                </label>
+                <h3 className="text-xl font-bold text-white">Create New Learning Goal</h3>
+                <p className="text-sm text-gray-400">Add a structured goal with priorities, category, difficulty, and optional deadline.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+              >
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Goal Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Master React & Next.js"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Describe Goal
-                </label>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Describe Goal</label>
                 <textarea
                   placeholder="Describe what you want to learn or achieve..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                  rows={3}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Priority 1
-                </label>
-                <input
-                  type="text"
-                  placeholder="Highest priority concept (e.g., Hooks, Database design)"
-                  value={priority1}
-                  onChange={(e) => setPriority1(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Priority 1</label>
+                  <input
+                    type="text"
+                    placeholder="High priority concept"
+                    value={priority1}
+                    onChange={(e) => setPriority1(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Priority 2</label>
+                  <input
+                    type="text"
+                    placeholder="Second priority concept"
+                    value={priority2}
+                    onChange={(e) => setPriority2(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Priority 3</label>
+                  <input
+                    type="text"
+                    placeholder="Third priority concept"
+                    value={priority3}
+                    onChange={(e) => setPriority3(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Priority 2
-                </label>
-                <input
-                  type="text"
-                  placeholder="Second priority concept (e.g., Styling, Auth)"
-                  value={priority2}
-                  onChange={(e) => setPriority2(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Priority 3
-                </label>
-                <input
-                  type="text"
-                  placeholder="Third priority concept (e.g., Deployments, CI/CD)"
-                  value={priority3}
-                  onChange={(e) => setPriority3(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Category
-                  </label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Category</label>
                   <input
                     type="text"
                     placeholder="e.g. Frontend"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Difficulty
-                  </label>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Difficulty</label>
                   <select
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
                   >
                     <option value="beginner">Beginner</option>
                     <option value="intermediate">Intermediate</option>
                     <option value="advanced">Advanced</option>
                   </select>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Target Date</label>
+                  <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(e) => setTargetDate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                  Target Date (Optional)
-                </label>
-                <input
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
-                />
-              </div>
+              {formError && (
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  {formError}
+                </div>
+              )}
+              {formSuccess && (
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                  {formSuccess}
+                </div>
+              )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-900">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end sm:items-center pt-4 border-t border-gray-900">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setFormError(null);
+                    setFormSuccess(null);
+                  }}
                   className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold shadow transition-colors"
+                  onClick={handleSubmit}
+                  className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl text-sm font-bold shadow transition-colors"
                 >
                   Save Goal
                 </button>
