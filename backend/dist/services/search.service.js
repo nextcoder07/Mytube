@@ -29,8 +29,12 @@ class SearchService {
         const visibleLimit = options?.limit || 70;
         const batchSize = search_cache_1.searchCache.getBatchSize();
         const fetchBatchSize = search_cache_1.searchCache.getFetchSize();
+        const topCount = Math.max(batchSize, visibleLimit);
         const providerPromises = providers.map(async (source) => {
             const cachedItems = search_cache_1.searchCache.getAll(query, source);
+            if (cachedItems && cachedItems.length > topCount) {
+                search_cache_1.searchCache.trim(query, topCount, source);
+            }
             const cachedLength = cachedItems?.length ?? 0;
             const hasSufficientCache = cachedLength >= visibleLimit;
             if (!hasSufficientCache) {
@@ -47,7 +51,7 @@ class SearchService {
                     search_cache_1.searchCache.set(query, providerResults, source);
                 }
             }
-            return search_cache_1.searchCache.getTop(query, Math.max(batchSize, visibleLimit), source) || [];
+            return search_cache_1.searchCache.getTop(query, topCount, source) || [];
         });
         const sourceResultsArray = await Promise.all(providerPromises);
         const rawResults = sourceResultsArray.flat();

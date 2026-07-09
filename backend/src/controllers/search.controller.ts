@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import SearchService from "../services/search.service";
 import providerManager from "../providers";
+import { searchCache } from "../cache/search-cache";
 import { success } from "../utils/response";
 import { HttpError } from "../utils/errors";
 
@@ -78,6 +79,27 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
     const results = await SearchService.searchAI(userId, query, { ...options, providers });
     const youtubeStatus = providerManager.getProvider("youtube")?.getStatus?.();
     res.status(200).json(success(results, "AI Search completed", { youtubeStatus }));
+  } catch (err: any) {
+    next(err);
+  }
+};
+
+export const clearSearchCache = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = req.query.q as string;
+    if (!query) {
+      return next(new HttpError(400, "Query parameter 'q' is required to clear or trim search cache."));
+    }
+
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    if (limitParam && limitParam > 0) {
+      searchCache.trim(query, limitParam);
+      res.status(200).json(success(null, `Search cache trimmed to top ${limitParam} results for query: ${query}`));
+      return;
+    }
+
+    searchCache.clear(query);
+    res.status(200).json(success(null, `Search cache cleared for query: ${query}`));
   } catch (err: any) {
     next(err);
   }

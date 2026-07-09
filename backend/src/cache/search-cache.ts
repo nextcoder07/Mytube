@@ -157,11 +157,61 @@ export class SearchCache {
   }
 
   /**
-   * Clear cache for a specific query
+   * Trim cached results to a maximum top count.
+   * If source is omitted, trim all query-specific cache entries.
+   */
+  trim(query: string, count: number, source?: string): void {
+    const normalized = query.toLowerCase().trim();
+
+    const trimEntry = (key: string) => {
+      const cached = this.memoryCache.get(key);
+      if (!cached) return;
+
+      const allResults = cached.batches.flat();
+      if (allResults.length <= count) return;
+
+      const trimmed = allResults.slice(0, count);
+      const batches = this.toBatches(trimmed);
+      this.memoryCache.set(key, {
+        ...cached,
+        batches,
+        totalResults: trimmed.length,
+        createdAt: Date.now(),
+      });
+    };
+
+    if (source) {
+      const key = this.getCacheKey(query, source);
+      trimEntry(key);
+      return;
+    }
+
+    const prefix = `${normalized}:`;
+    for (const key of Array.from(this.memoryCache.keys())) {
+      if (key === normalized || key.startsWith(prefix)) {
+        trimEntry(key);
+      }
+    }
+  }
+
+  /**
+   * Clear cache for a specific query and optional source.
+   * If source is omitted, remove all cached entries for the query across sources.
    */
   clear(query: string, source?: string): void {
-    const key = this.getCacheKey(query, source);
-    this.memoryCache.delete(key);
+    const normalized = query.toLowerCase().trim();
+    if (source) {
+      const key = this.getCacheKey(query, source);
+      this.memoryCache.delete(key);
+      return;
+    }
+
+    const prefix = `${normalized}:`;
+    for (const key of Array.from(this.memoryCache.keys())) {
+      if (key === normalized || key.startsWith(prefix)) {
+        this.memoryCache.delete(key);
+      }
+    }
   }
 
   /**

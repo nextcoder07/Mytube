@@ -49,6 +49,18 @@ class YouTubeKeyManager {
   }
 
   /**
+   * Returns true when every configured key is currently marked exhausted.
+   */
+  isAllExhausted(): boolean {
+    if (this.keys.length === 0) return true;
+    const now = Date.now();
+    return this.keys.every((key) => {
+      const exhaustedUntil = this.exhaustedUntil.get(key) || 0;
+      return now < exhaustedUntil;
+    });
+  }
+
+  /**
    * Get the next available (non-exhausted) API key.
    * Returns null if all keys are exhausted.
    */

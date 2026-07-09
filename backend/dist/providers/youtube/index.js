@@ -41,6 +41,18 @@ class YouTubeKeyManager {
         return this.keys.length > 0;
     }
     /**
+     * Returns true when every configured key is currently marked exhausted.
+     */
+    isAllExhausted() {
+        if (this.keys.length === 0)
+            return true;
+        const now = Date.now();
+        return this.keys.every((key) => {
+            const exhaustedUntil = this.exhaustedUntil.get(key) || 0;
+            return now < exhaustedUntil;
+        });
+    }
+    /**
      * Get the next available (non-exhausted) API key.
      * Returns null if all keys are exhausted.
      */
@@ -80,7 +92,15 @@ class YouTubeKeyManager {
 const keyManager = new YouTubeKeyManager();
 class YouTubeProvider {
     name = "youtube";
+    quotaExhausted = false;
+    getStatus() {
+        return {
+            limitReached: this.quotaExhausted,
+            message: this.quotaExhausted ? "YouTube API quota exhausted for all configured keys." : undefined,
+        };
+    }
     async search(query, options) {
+        this.quotaExhausted = false;
         // Detect if searching for a YouTube channel
         const isChannelSearch = this.isChannelQuery(query);
         if (isChannelSearch) {
@@ -101,7 +121,10 @@ class YouTubeProvider {
             let fetched = 0;
             let activeKey = keyManager.getKey();
             if (!activeKey) {
-                console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
+                this.quotaExhausted = keyManager.isAllExhausted();
+                if (this.quotaExhausted) {
+                    console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
+                }
                 return await this.searchViaDDG(query, Math.max(options?.limit || 70, 70));
             }
             // Use exact query unless an AI context/goal is provided
@@ -118,6 +141,7 @@ class YouTubeProvider {
             // Fetch multiple pages if needed
             while (fetched < effectiveTotal) {
                 if (!activeKey) {
+                    this.quotaExhausted = keyManager.isAllExhausted();
                     console.warn("All YouTube API keys exhausted mid-search. Returning partial results.");
                     break;
                 }
@@ -180,6 +204,7 @@ class YouTubeProvider {
                 if (detailsRes.status === 429 || detailsRes.status === 403) {
                     keyManager.markExhausted(activeKey);
                     activeKey = keyManager.getKey();
+                    this.quotaExhausted = keyManager.isAllExhausted();
                     if (activeKey) {
                         i -= 50; // retry this batch with new key
                     }

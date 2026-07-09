@@ -87,6 +87,22 @@ export function useSearch() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Content[] = (data as any)?.data ?? [];
 
+  const clearCacheForQuery = useCallback(async (q: string) => {
+    try {
+      await api.delete('/search/cache', { params: { q } });
+    } catch (err) {
+      console.warn('[useSearch] Failed to clear cache for query', q, err);
+    }
+  }, []);
+
+  const trimCacheForQuery = useCallback(async (q: string, limit: number) => {
+    try {
+      await api.delete('/search/cache', { params: { q, limit } });
+    } catch (err) {
+      console.warn('[useSearch] Failed to trim cache for query', q, 'to', limit, err);
+    }
+  }, []);
+
   // After each fetch, check if we got fewer results than the limit (meaning no more to load)
   if (results.length > 0 && results.length !== prevResultCountRef.current) {
     prevResultCountRef.current = results.length;
@@ -119,10 +135,14 @@ export function useSearch() {
     if (!params || isFetching) return;
     const currentLimit = params.limit || BATCH_SIZE;
     if (currentLimit > BATCH_SIZE) {
-      setParams({ ...params, limit: currentLimit - LOAD_MORE_STEP });
+      const newLimit = currentLimit - LOAD_MORE_STEP;
+      setParams({ ...params, limit: newLimit });
       setHasMore(true); // Since we stepped back, we definitely have more to load ahead
+      if (params.q) {
+        trimCacheForQuery(params.q, newLimit);
+      }
     }
-  }, [params, isFetching]);
+  }, [params, isFetching, trimCacheForQuery]);
 
   const goBackQuery = useCallback(() => {
     if (queryHistory.length === 0) return;
@@ -136,9 +156,12 @@ export function useSearch() {
   const resetSearch = useCallback(() => {
     prevResultCountRef.current = 0;
     setHasMore(true);
+    if (params?.q) {
+      clearCacheForQuery(params.q);
+    }
     setParams(null);
     setQueryHistory([]);
-  }, []);
+  }, [params?.q, clearCacheForQuery]);
 
   return { 
     results, 

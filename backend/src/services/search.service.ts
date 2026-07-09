@@ -33,9 +33,14 @@ export class SearchService {
     const visibleLimit = options?.limit || 70;
     const batchSize = searchCache.getBatchSize();
     const fetchBatchSize = searchCache.getFetchSize();
+    const topCount = Math.max(batchSize, visibleLimit);
 
     const providerPromises = providers.map(async (source) => {
       const cachedItems = searchCache.getAll(query, source);
+      if (cachedItems && cachedItems.length > topCount) {
+        searchCache.trim(query, topCount, source);
+      }
+
       const cachedLength = cachedItems?.length ?? 0;
       const hasSufficientCache = cachedLength >= visibleLimit;
 
@@ -54,7 +59,7 @@ export class SearchService {
         }
       }
 
-      return searchCache.getTop(query, Math.max(batchSize, visibleLimit), source) || [];
+      return searchCache.getTop(query, topCount, source) || [];
     });
 
     const sourceResultsArray = await Promise.all(providerPromises);
