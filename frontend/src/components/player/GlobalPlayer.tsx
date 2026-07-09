@@ -289,11 +289,11 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchBefore.map((item) => (
-                        <div key={`before-${item.id}`} className="min-w-[160px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`before-${item.id}`} className="min-w-[120px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
-                          <p className="mt-2 text-sm font-semibold text-gray-200 line-clamp-2">{item.title}</p>
+                          <p className="mt-1 text-xs font-semibold text-gray-200 line-clamp-2">{item.title}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
                             <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
@@ -310,11 +310,11 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchAfter.map((item) => (
-                        <div key={`after-${item.id}`} className="min-w-[160px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`after-${item.id}`} className="min-w-[120px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
-                          <p className="mt-2 text-sm font-semibold text-gray-200 line-clamp-2">{item.title}</p>
+                          <p className="mt-1 text-xs font-semibold text-gray-200 line-clamp-2">{item.title}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
                             <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
@@ -335,12 +335,12 @@ export default function GlobalPlayer() {
                   </div>
                     <div className="mt-3 grid grid-cols-1 gap-4">
                     {relatedList.map((item) => (
-                      <div key={`rel-${item.id}`} className="flex gap-3 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
-                        <div className="w-32 aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+                        <div key={`rel-${item.id}`} className="flex gap-4 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
+                        <div className="w-40 aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
                           {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-200 line-clamp-2">{item.title}</p>
+                          <p className="text-base font-semibold text-gray-200 line-clamp-2">{item.title}</p>
                           <p className="text-xs text-gray-400 mt-1">{item.author}</p>
                           <div className="flex gap-3 mt-2">
                             <button onClick={(e) => { e.stopPropagation(); play(item, relatedList); }} className="text-xs text-violet-400">Play</button>
