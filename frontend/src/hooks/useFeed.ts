@@ -9,15 +9,13 @@ interface FeedResponsePayload {
   hasMore?: boolean;
 }
 
-type RawFeedItem = Content | { content: Content };
-
 function isRecommendationItem(item: unknown): item is { content: Content } {
   return (
     typeof item === 'object' &&
     item !== null &&
     'content' in item &&
-    typeof (item as any).content === 'object' &&
-    (item as any).content !== null
+    typeof (item as { content?: unknown }).content === 'object' &&
+    (item as { content?: unknown }).content !== null
   );
 }
 
