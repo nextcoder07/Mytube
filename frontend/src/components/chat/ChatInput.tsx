@@ -61,3 +61,4 @@ export default function ChatInput({ onSend, isLoading = false, placeholder = 'As
     </div>
   );
 }
+//
