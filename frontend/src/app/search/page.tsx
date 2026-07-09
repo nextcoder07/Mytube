@@ -24,7 +24,7 @@ export default function SearchPage() {
   const [inputValue, setInputValue] = useState('');
   const [aiMode, setAiMode] = useState(false);
   const [aiContext, setAiContext] = useState('');
-  const ALL_PROVIDERS = ["youtube", "github", "reddit", "medium", "website"];
+  const ALL_PROVIDERS = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
   const [selectedProviders, setSelectedProviders] = useState<string[]>(ALL_PROVIDERS);
   const [filters, setFilters] = useState<SearchFiltersState>({
     order: 'relevance',

@@ -13,6 +13,8 @@ const providersList = [
   { id: "github", label: "GitHub" },
   { id: "reddit", label: "Reddit" },
   { id: "medium", label: "Medium" },
+  { id: "devto", label: "Dev.to" },
+  { id: "wikipedia", label: "Wikipedia" },
   { id: "website", label: "Official Docs" },
 ];
 
