@@ -217,17 +217,24 @@ export default function GlobalPlayer() {
   return (
     <div className="flex-1 w-full h-full bg-gray-900 flex flex-col overflow-y-auto animate-in fade-in duration-200">
       
-      {/* Player embed - Full Width */}
-      <div className="w-full bg-black aspect-video lg:max-h-[75vh] flex items-center justify-center relative shadow-2xl flex-shrink-0">
-        {/* Controls overlay */}
-        <div className="absolute top-4 right-4 flex gap-2 z-10">
-          <button onClick={minimize} className="p-2 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Minimize">
+      {/* Top Navigation Bar inside Player */}
+      <div className="w-full bg-black border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+        <button onClick={closePlayer} className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors">
+          <span className="text-lg leading-none">&larr;</span> Back to Search Results
+        </button>
+        <div className="flex gap-2">
+          <button onClick={minimize} className="p-1.5 bg-gray-800/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors" title="Minimize Player (Picture in Picture)">
             <MinusSmallIcon className="w-5 h-5" />
           </button>
-          <button onClick={closePlayer} className="p-2 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Close">
+          <button onClick={closePlayer} className="p-1.5 bg-gray-800/50 hover:bg-red-500/20 rounded-lg text-gray-300 hover:text-red-400 transition-colors" title="Close Player">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
+      </div>
+
+      {/* Player embed - Full Width */}
+      <div className="w-full bg-black aspect-video lg:max-h-[75vh] flex items-center justify-center relative shadow-2xl flex-shrink-0">
+
 
         {isYouTube && videoId ? (
           <iframe

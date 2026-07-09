@@ -1,32 +1,14 @@
 // frontend/src/hooks/useSearch.ts
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { Content } from '../types/content';
+import { useSearchStore, SearchParams } from '../store/search.store';
 
 const BATCH_SIZE = 100; // fetch up to 100 items per batch for relevance‑first loading
 
-
-interface SearchParams {
-  q: string;
-  providers?: string;
-  type?: string;
-  page?: number;
-  limit?: number;
-  // YouTube-optimized filters
-  order?: string;
-  videoDuration?: string;
-  videoCategoryId?: string;
-  relevanceLanguage?: string;
-  // AI search mode
-  aiMode?: boolean;
-  aiContext?: string;
-}
-
 export function useSearch() {
-  const [params, setParams] = useState<SearchParams | null>(null);
-  const [queryHistory, setQueryHistory] = useState<SearchParams[]>([]);
-  const [hasMore, setHasMore] = useState(true);
+  const { params, setParams, queryHistory, setQueryHistory, hasMore, setHasMore } = useSearchStore();
   const prevResultCountRef = useRef(0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,7 +62,6 @@ export function useSearch() {
 
   const { data, isLoading, isFetching, error } = useQuery(queryOptions);
 
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const results: Content[] = (data as any)?.data ?? [];
 
@@ -104,13 +85,13 @@ export function useSearch() {
       }
       return { ...newParams, limit: BATCH_SIZE };
     });
-  }, []);
+  }, [setHasMore, setParams, setQueryHistory]);
 
   const loadMore = useCallback(() => {
     if (!params || !hasMore || isFetching) return;
     const currentLimit = params.limit || BATCH_SIZE;
     setParams({ ...params, limit: currentLimit + BATCH_SIZE });
-  }, [params, hasMore, isFetching]);
+  }, [params, hasMore, isFetching, setParams]);
 
   const loadPrevious = useCallback(() => {
     if (!params || isFetching) return;
@@ -119,7 +100,7 @@ export function useSearch() {
       setParams({ ...params, limit: currentLimit - BATCH_SIZE });
       setHasMore(true); // Since we stepped back, we definitely have more to load ahead
     }
-  }, [params, isFetching]);
+  }, [params, isFetching, setHasMore, setParams]);
 
   const goBackQuery = useCallback(() => {
     if (queryHistory.length === 0) return;
@@ -128,7 +109,7 @@ export function useSearch() {
     prevResultCountRef.current = 0;
     setHasMore(true);
     setParams(previous);
-  }, [queryHistory]);
+  }, [queryHistory, setHasMore, setParams, setQueryHistory]);
 
   return { 
     results, 
