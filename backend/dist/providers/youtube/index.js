@@ -77,11 +77,14 @@ class YouTubeProvider {
         // Detect if searching for a YouTube channel
         const isChannelSearch = this.isChannelQuery(query);
         if (isChannelSearch) {
-            return await this.searchChannel(query, options?.limit || 20);
+            const results = await this.searchChannel(query, options?.limit || 20);
+            console.debug(`[YouTube] Channel search for "${query}" returned ${results.length} results`);
+            return results;
         }
+        // Try API first, fallback to DDG if needed
         if (!keyManager.hasKeys()) {
-            console.warn("YouTube API Key(s) not set. Falling back to DuckDuckGo scraper.");
-            return this.searchViaDDG(query, options?.limit || 20);
+            console.warn("[YouTube] No API keys configured. Using DDG fallback scraper for generic search.");
+            return await this.searchViaDDG(query, options?.limit || 20);
         }
         try {
             const perPage = Math.min(options?.limit || 100, 50); // YouTube max is 50
@@ -91,8 +94,8 @@ class YouTubeProvider {
             let fetched = 0;
             let activeKey = keyManager.getKey();
             if (!activeKey) {
-                console.warn("All YouTube API keys are rate-limited. Falling back to DuckDuckGo scraper.");
-                return this.searchViaDDG(query, options?.limit || 20);
+                console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
+                return await this.searchViaDDG(query, options?.limit || 20);
             }
             // Use exact query unless an AI context/goal is provided
             let effectiveQuery = query;
@@ -212,8 +215,9 @@ class YouTubeProvider {
         }
         catch (err) {
             const message = err instanceof Error ? err.message : String(err);
-            console.error("YouTube search error:", message);
-            return [];
+            console.error("[YouTube] API search error:", message, "Falling back to DDG scraper");
+            // Graceful fallback to DDG scraper on error
+            return await this.searchViaDDG(query, options?.limit || 20);
         }
     }
     parseISO8601Duration(durationStr) {

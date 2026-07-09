@@ -87,12 +87,15 @@ export class YouTubeProvider implements ContentProvider {
     const isChannelSearch = this.isChannelQuery(query);
     
     if (isChannelSearch) {
-      return await this.searchChannel(query, options?.limit || 20);
+      const results = await this.searchChannel(query, options?.limit || 20);
+      console.debug(`[YouTube] Channel search for "${query}" returned ${results.length} results`);
+      return results;
     }
 
+    // Try API first, fallback to DDG if needed
     if (!keyManager.hasKeys()) {
-      console.warn("YouTube API Key(s) not set. Falling back to DuckDuckGo scraper.");
-      return this.searchViaDDG(query, options?.limit || 20);
+      console.warn("[YouTube] No API keys configured. Using DDG fallback scraper for generic search.");
+      return await this.searchViaDDG(query, options?.limit || 20);
     }
 
     try {
@@ -104,8 +107,8 @@ export class YouTubeProvider implements ContentProvider {
       let activeKey = keyManager.getKey();
 
       if (!activeKey) {
-        console.warn("All YouTube API keys are rate-limited. Falling back to DuckDuckGo scraper.");
-        return this.searchViaDDG(query, options?.limit || 20);
+        console.warn("[YouTube] All YouTube API keys are rate-limited. Using DDG fallback.");
+        return await this.searchViaDDG(query, options?.limit || 20);
       }
 
       // Use exact query unless an AI context/goal is provided
@@ -242,8 +245,9 @@ export class YouTubeProvider implements ContentProvider {
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("YouTube search error:", message);
-      return [];
+      console.error("[YouTube] API search error:", message, "Falling back to DDG scraper");
+      // Graceful fallback to DDG scraper on error
+      return await this.searchViaDDG(query, options?.limit || 20);
     }
   }
 
