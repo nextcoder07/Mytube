@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -38,9 +39,16 @@ export default function AuthButton() {
 
   return (
     <Link href="/profile" className="flex items-center gap-3 cursor-pointer">
-      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700 hover:ring-2 hover:ring-violet-500 transition-all">
+      <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-700 hover:ring-2 hover:ring-violet-500 transition-all">
         {avatar ? (
-          <img src={avatar} alt={name} className="w-8 h-8 object-cover" />
+          <Image
+            src={avatar}
+            alt={name}
+            width={32}
+            height={32}
+            className="object-cover"
+            unoptimized
+          />
         ) : (
           <div className="w-8 h-8 bg-gray-600 flex items-center justify-center text-xs font-bold text-white uppercase">
             {name.charAt(0)}

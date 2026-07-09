@@ -6,6 +6,13 @@ import type { Content } from '../../types/content';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { ArrowPathIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 
+export type SearchResponseMeta = {
+  youtubeStatus?: {
+    limitReached: boolean;
+    message?: string;
+  };
+};
+
 interface Props {
   results: Content[];       // already-accumulated list from useSearch hook
   isLoading: boolean;
@@ -15,7 +22,7 @@ interface Props {
   onLoadPrevious?: () => void;
   hasMore?: boolean;
   limit?: number;
-  responseMeta?: any;
+  responseMeta?: SearchResponseMeta | null;
 }
 
 type SortByOption = 'relevance' | 'date' | 'popularity';

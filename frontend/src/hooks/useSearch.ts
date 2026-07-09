@@ -7,6 +7,20 @@ import type { Content } from '../types/content';
 const BATCH_SIZE = 70; // fetch at least 70 items per source initially (minimum extendable size)
 const LOAD_MORE_STEP = 70; // subsequent batches fetch another 70 results to maintain consistency
 
+export type SearchResponseMeta = {
+  youtubeStatus?: {
+    limitReached: boolean;
+    message?: string;
+  };
+};
+
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  error: unknown;
+  meta?: SearchResponseMeta | null;
+}
 
 interface SearchParams {
   q: string;
@@ -31,8 +45,7 @@ export function useSearch() {
   const [hasMore, setHasMore] = useState(true);
   const prevResultCountRef = useRef(0);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const queryOptions: any = {
+  const queryOptions = {
     queryKey: ['search', params],
     queryFn: async () => {
       if (!params?.q) return { data: [] };
@@ -83,9 +96,8 @@ export function useSearch() {
 
   const { data, isLoading, isFetching, error } = useQuery(queryOptions);
 
-  const responseMeta = (data as any)?.meta ?? null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results: Content[] = (data as any)?.data ?? [];
+  const responseMeta = (data as ApiResponse<Content[]>)?.meta ?? null;
+  const results: Content[] = (data as ApiResponse<Content[]>)?.data ?? [];
 
   const clearCacheForQuery = useCallback(async (q: string) => {
     try {
