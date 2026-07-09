@@ -96,8 +96,7 @@ export default function GlobalPlayer() {
     return null;
   };
 
-  const isYouTube = activeContent.source === 'youtube';
-  const videoId = isYouTube ? getYoutubeVideoId(activeContent.url) : null;
+  
 
 
   useEffect(() => {
@@ -129,6 +128,9 @@ export default function GlobalPlayer() {
   }, [activeContent, activeContent?.id, relatedLimit, searchStore.params?.q, searchStore.params?.order]);
 
   if (!activeContent) return null;
+
+  const isYouTube = activeContent.source === 'youtube';
+  const videoId = isYouTube ? getYoutubeVideoId(activeContent.url) : null;
 
   return (
     <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200"}>
