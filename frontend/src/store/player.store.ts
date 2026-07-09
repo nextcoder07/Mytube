@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist } from 'zustand/middleware';
 import { Content } from "../types/content";
+import { useSearchStore } from './search.store';
 
 interface PlayerState {
   activeContent: Content | null;
@@ -11,6 +12,10 @@ interface PlayerState {
   history: Content[];
   /** Watch Later list — user-curated */
   watchLater: Content[];
+  /** Timestamped watch history (pruned to last 2 months) */
+  watchHistory: { content: Content; watchedAt: string; goalId?: string }[];
+  /** Goal-oriented history (kept indefinitely) */
+  goalHistory: { content: Content; watchedAt: string; goalId?: string }[];
   /**
    * Stable instance id for the currently-playing content.
    * Changes ONLY when a *different* piece of content starts playing.
@@ -18,7 +23,8 @@ interface PlayerState {
    */
   instanceId: string | null;
 
-  play: (content: Content, queue?: Content[]) => void;
+  play: (content: Content, queue?: Content[], opts?: { goalId?: string }) => void;
+  recordWatch: (content: Content, opts?: { goalId?: string }) => void;
   minimize: () => void;
   maximize: () => void;
   closePlayer: () => void;
@@ -38,10 +44,13 @@ export const usePlayerStore = create<PlayerState>()(
       isMinimized: false,
       queue: [],
       history: [],
+      watchHistory: [],
+      goalHistory: [],
       watchLater: [],
       instanceId: null,
 
-      play: (content, queue) =>
+      // Record play and track history. opts.goalId overrides current search goal.
+      play: (content, queue, opts) =>
         set((state) => {
           const history = [...state.history];
           if (state.activeContent && state.activeContent.id !== content.id) {
@@ -53,13 +62,58 @@ export const usePlayerStore = create<PlayerState>()(
             state.activeContent?.id === content.id
               ? state.instanceId
               : `player-${content.id}-${Date.now()}`;
-          return {
-            activeContent: content,
-            isMinimized: false,
-            queue: queue || state.queue,
-            history,
-            instanceId: newInstanceId,
-          };
+
+          // Record watch entry (reads current goalId from search store if not provided)
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const searchState: any = useSearchStore.getState();
+            const currentGoalId = (opts && opts.goalId) || searchState?.params?.goalId || null;
+            // call recordWatch via set to access latest state
+            const watchedAt = new Date().toISOString();
+            const watchEntry = { content, watchedAt, goalId: currentGoalId || undefined };
+            const twoMonthsAgo = Date.now() - 60 * 24 * 60 * 60 * 1000; // ~60 days
+            const updatedWatchHistory = [...(state.watchHistory || []), watchEntry]
+              .filter((e) => new Date(e.watchedAt).getTime() >= twoMonthsAgo);
+
+            const updatedGoalHistory = [...(state.goalHistory || [])];
+            if (currentGoalId) {
+              updatedGoalHistory.push(watchEntry);
+            }
+
+            return {
+              activeContent: content,
+              isMinimized: false,
+              queue: queue || state.queue,
+              history,
+              instanceId: newInstanceId,
+              watchHistory: updatedWatchHistory,
+              goalHistory: updatedGoalHistory,
+            };
+          } catch (error) {
+            console.warn('record watch failed', error);
+            return {
+              activeContent: content,
+              isMinimized: false,
+              queue: queue || state.queue,
+              history,
+              instanceId: newInstanceId,
+            };
+          }
+        }),
+
+      // Also expose a direct recorder if other code wants to add without playing
+      recordWatch: (content, opts) =>
+        set((state) => {
+          const watchedAt = new Date().toISOString();
+          const searchState = useSearchStore.getState() as { params?: { goalId?: string } } | undefined;
+          const currentGoalId = (opts && opts.goalId) || searchState?.params?.goalId || null;
+          const watchEntry = { content, watchedAt, goalId: currentGoalId || undefined };
+          const twoMonthsAgo = Date.now() - 60 * 24 * 60 * 60 * 1000;
+          const updatedWatchHistory = [...(state.watchHistory || []), watchEntry]
+            .filter((e) => new Date(e.watchedAt).getTime() >= twoMonthsAgo);
+          const updatedGoalHistory = [...(state.goalHistory || [])];
+          if (currentGoalId) updatedGoalHistory.push(watchEntry);
+          return { watchHistory: updatedWatchHistory, goalHistory: updatedGoalHistory } as unknown as PlayerState;
         }),
 
   // Minimize & maximize do NOT touch instanceId — iframe stays alive
@@ -167,6 +221,8 @@ export const usePlayerStore = create<PlayerState>()(
         history: state.history,
         watchLater: state.watchLater,
         isMinimized: state.isMinimized,
+        watchHistory: state.watchHistory,
+        goalHistory: state.goalHistory,
       }),
     }
   )

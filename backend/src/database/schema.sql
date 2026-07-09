@@ -37,6 +37,7 @@ create table if not exists public.goals (
   difficulty varchar(50) default 'beginner'::varchar, -- 'beginner', 'intermediate', 'advanced'
   target_date date,
   status varchar(50) default 'active'::varchar, -- 'active', 'completed', 'paused'
+  use_in_search boolean default true not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

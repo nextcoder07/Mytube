@@ -1,20 +1,29 @@
 'use client';
 // frontend/src/app/feed/page.tsx
 import React, { useState } from 'react';
+import Link from 'next/link';
 import ContentGrid from '../../components/content/ContentGrid';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useFeed } from '../../hooks/useFeed';
+import { useLocalGoalFeed } from '../../hooks/useLocalGoalFeed';
+import { useGoals } from '../../hooks/useGoals';
 
 export default function FeedPage() {
   const [recommended, setRecommended] = useState(false);
   const { items, isLoading, error } = useFeed(recommended);
+  const { items: localGoalItems } = useLocalGoalFeed();
+  const { goals, isLoading: goalsLoading } = useGoals();
+
+  const hasGoals = goals.length > 0;
+  const displayItems = recommended && localGoalItems.length > 0 ? localGoalItems : items;
+  const title = recommended ? 'Recommended for You' : hasGoals ? 'Goal-based Feed' : 'General Feed';
 
   return (
     <main className="flex-1 p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Feed</h1>
-          <p className="text-gray-400 mt-1">Content curated just for you.</p>
+          <p className="text-gray-400 mt-1">Content curated from your goals and recent activity.</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -38,14 +47,33 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading || goalsLoading ? (
         <div className="flex justify-center py-20"><LoadingSpinner /></div>
       ) : error ? (
         <p className="text-red-400 text-center py-10">Failed to load feed.</p>
-      ) : items.length === 0 ? (
-        <p className="text-gray-400 text-center py-16">No content yet. Start searching to populate your feed!</p>
       ) : (
-        <ContentGrid items={items} />
+        <>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-white">{title}</h2>
+            {!hasGoals && (
+              <Link href="/goals" className="text-sm text-violet-300 hover:text-violet-100 transition">
+                Add a goal to personalize your feed →
+              </Link>
+            )}
+          </div>
+
+          {displayItems.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-gray-700 bg-gray-900/40 p-10 text-center">
+              <p className="text-gray-400 text-sm max-w-xl mx-auto">
+                {hasGoals
+                  ? 'We could not find enough personalized content yet. Try generating a roadmap or exploring goals in the Goals page.'
+                  : 'No goals defined yet. Create a goal in the Goals page and come back for a personalized feed.'}
+              </p>
+            </div>
+          ) : (
+            <ContentGrid items={displayItems} />
+          )}
+        </>
       )}
     </main>
   );

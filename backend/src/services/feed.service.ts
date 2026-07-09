@@ -2,6 +2,7 @@
 import { supabase } from "../utils/supabase";
 import SearchService from "./search.service";
 import GoalsService from "./goals.service";
+import { SearchOptions } from "../models/content.model";
 
 export class FeedService {
   /**
@@ -10,23 +11,28 @@ export class FeedService {
    */
   static async getFeed(userId: string, page = 1, limit = 10) {
     try {
-      // 1. Fetch active goals
+      // 1. Fetch active goals and context
       const goals = await GoalsService.getGoals(userId);
       const activeGoals = goals.filter((g) => g.status === "active");
+      const goalContext = await GoalsService.getActiveGoalContext(userId);
 
       let query = "software development";
+      let goalId: string | undefined;
       if (activeGoals.length > 0) {
-        // Pick one active goal randomly or based on latest
-        query = activeGoals[0].title;
+        query = activeGoals.map((goal) => goal.title).join(" | ");
+        goalId = activeGoals[0].id;
       }
 
-      // 2. Perform search across providers
-      const contentList = await SearchService.search(userId, query, {
+      // 2. Perform search across providers with goal-aware ranking if possible
+      const searchOptions: SearchOptions = {
         limit: limit * 2,
         providers: ["youtube", "github", "reddit", "medium"],
-      });
+        goalId,
+        aiContext: goalContext,
+      };
 
-      // Paginate results
+      const contentList = await SearchService.search(userId, query, searchOptions);
+
       const start = (page - 1) * limit;
       const paginated = contentList.slice(start, start + limit);
 
@@ -54,21 +60,21 @@ export class FeedService {
 
     if (error) throw error;
 
-    // If database recommendations are empty, pre-generate or fall back to high quality general topics
-    if (!data || data.length === 0) {
-      const fallbackFeed = await this.getFeed(userId, 1, 10);
-      return fallbackFeed.content.map((item, idx) => ({
-        id: `rec_${idx}`,
-        user_id: userId,
-        content_id: item.id,
-        score: 9.0 - idx * 0.5,
-        reason: "Recommended based on your learning interests.",
-        content: item,
-        created_at: new Date(),
-      }));
+    const recommendations = (data || []).filter((item: any) => item.content).map((item: any) => ({
+      ...item.content,
+      metadata: {
+        ...item.content.metadata,
+        recommendationReason: item.reason,
+        recommendationScore: item.score,
+      },
+    }));
+
+    if (recommendations.length > 0) {
+      return recommendations;
     }
 
-    return data;
+    const fallbackFeed = await this.getFeed(userId, 1, 10);
+    return fallbackFeed.content;
   }
 }
 

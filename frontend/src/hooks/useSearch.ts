@@ -1,8 +1,9 @@
 // frontend/src/hooks/useSearch.ts
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { Content } from '../types/content';
+import { useSearchStore } from '../store/search.store';
 
 const BATCH_SIZE = 70; // visible page size
 const INITIAL_YT = 100; // initial YouTube seed size
@@ -42,9 +43,14 @@ interface SearchParams {
 }
 
 export function useSearch() {
-  const [params, setParams] = useState<SearchParams | null>(null);
-  const [queryHistory, setQueryHistory] = useState<SearchParams[]>([]);
-  const [hasMore, setHasMore] = useState(true);
+  const {
+    params,
+    queryHistory,
+    hasMore,
+    setParams,
+    setQueryHistory,
+    setHasMore,
+  } = useSearchStore();
   const prevResultCountRef = useRef(0);
 
   const queryOptions = {
@@ -126,7 +132,7 @@ export function useSearch() {
       const initialLimit = isYouTubeOnly ? INITIAL_YT : BATCH_SIZE;
       return { ...newParams, limit: initialLimit };
     });
-  }, []);
+  }, [setHasMore, setParams, setQueryHistory]);
 
   const loadMore = useCallback(() => {
     if (!params || isFetching) return;
@@ -136,7 +142,7 @@ export function useSearch() {
     // If YouTube keys are exhausted (quota), reduce next batch size to save tokens
     const step = (isYouTubeOnly && (responseMeta?.youtubeStatus?.limitReached)) ? FALLBACK_LOAD_MORE_STEP : LOAD_MORE_STEP;
     setParams({ ...params, limit: currentLimit + step });
-  }, [params, isFetching, responseMeta]);
+  }, [params, isFetching, responseMeta, setParams]);
 
   const loadPrevious = useCallback(() => {
     if (!params || isFetching) return;
@@ -151,7 +157,7 @@ export function useSearch() {
       setParams({ ...params, limit: newLimit });
       setHasMore(true); // Since we stepped back, we definitely have more to load ahead
     }
-  }, [params, isFetching]);
+  }, [params, isFetching, setParams, setHasMore]);
 
   const goBackQuery = useCallback(() => {
     if (queryHistory.length === 0) return;
@@ -160,7 +166,7 @@ export function useSearch() {
     prevResultCountRef.current = 0;
     setHasMore(true);
     setParams(previous);
-  }, [queryHistory]);
+  }, [queryHistory, setHasMore, setParams, setQueryHistory]);
 
   const resetSearch = useCallback(() => {
     prevResultCountRef.current = 0;
@@ -172,7 +178,7 @@ export function useSearch() {
     }
     setParams(null);
     setQueryHistory([]);
-  }, [params?.q]);
+  }, [params?.q, setHasMore, setParams, setQueryHistory]);
 
   return { 
     results, 

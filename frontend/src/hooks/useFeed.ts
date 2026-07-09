@@ -15,6 +15,14 @@ export function useFeed(recommended = false) {
     staleTime: 1000 * 60 * 10, // 10 min
   });
 
-  const items: Content[] = data?.data ?? [];
+  let items: Content[] = [];
+  const payload = data?.data;
+
+  if (Array.isArray(payload)) {
+    items = payload.map((item: any) => (item?.content ? item.content : item));
+  } else if (payload?.content) {
+    items = payload.content;
+  }
+
   return { items, isLoading, error, refetch };
 }

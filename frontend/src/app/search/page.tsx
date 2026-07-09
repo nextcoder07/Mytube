@@ -1,11 +1,12 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import SearchBar from '../../components/search/SearchBar';
 import SearchResults from '../../components/search/SearchResults';
 import SearchFilters from '../../components/search/SearchFilters';
 import type { SearchFiltersState } from '../../types/content';
 
 import { useSearch } from '../../hooks/useSearch';
+import { useSearchStore } from '../../store/search.store';
 
 
 
@@ -25,33 +26,34 @@ export default function SearchPage() {
     currentQuery,
     limit 
   } = useSearch();
-  const [query, setQuery] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [aiMode, setAiMode] = useState(false);
-  const [aiContext, setAiContext] = useState('');
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(["youtube"]);
-  const [filters, setFilters] = useState<SearchFiltersState>({
-    order: 'relevance',
-    videoDuration: 'any',
-    videoCategoryId: '',
-    relevanceLanguage: 'en',
-  });
+  const {
+    inputValue,
+    query,
+    aiMode,
+    aiContext,
+    selectedProviders,
+    filters,
+    setInputValue,
+    setQuery,
+    setAiMode,
+    setAiContext,
+    setSelectedProviders,
+    setFilters,
+  } = useSearchStore();
 
   // Sync inputs with the current active query (important when traversing query history)
   useEffect(() => {
     if (currentQuery) {
       setQuery(currentQuery);
       setInputValue(currentQuery);
-    } else {
-      setQuery('');
-      setInputValue('');
     }
-  }, [currentQuery]);
+  }, [currentQuery, setQuery, setInputValue]);
 
   const handleSearch = (q: string) => {
     const trimmed = q.trim();
     if (!trimmed) return;
     setQuery(trimmed);
+    setInputValue(trimmed);
     search({
       q: trimmed,
       aiMode,
@@ -69,7 +71,7 @@ export default function SearchPage() {
   };
 
   const handleFilterChange = (key: keyof SearchFiltersState, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters({ ...filters, [key]: value });
   };
 
   return (
