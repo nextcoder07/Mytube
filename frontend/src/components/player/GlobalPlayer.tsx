@@ -289,7 +289,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchBefore.map((item) => (
-                        <div key={`before-${item.id}`} className="min-w-[120px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`before-${item.id}`} className="min-w-[10rem] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
@@ -310,7 +310,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchAfter.map((item) => (
-                        <div key={`after-${item.id}`} className="min-w-[120px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`after-${item.id}`} className="min-w-[10rem] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
@@ -336,7 +336,7 @@ export default function GlobalPlayer() {
                     <div className="mt-3 grid grid-cols-1 gap-4">
                     {relatedList.map((item) => (
                         <div key={`rel-${item.id}`} className="flex gap-4 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
-                        <div className="w-40 aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+                        <div className="min-w-[120px] aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
                           {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                         </div>
                         <div className="flex-1">
