@@ -100,6 +100,17 @@ export default function SearchResults({
 
   // Query was entered but 0 results came back AND we are not still loading
   if (!isLoading && !isFetching && results.length === 0) {
+    if (responseMeta?.youtubeStatus?.limitReached) {
+      return (
+        <div className="text-center py-20 text-gray-500">
+          <p className="text-lg font-bold text-white">YouTube quota has been exhausted</p>
+          <p className="text-sm mt-2">
+            Some results may be unavailable right now because all configured YouTube keys have reached their limit. Try again later or enable additional providers.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="text-center py-20 text-gray-500">
         <p className="text-lg">No results found for &quot;{query}&quot;</p>
