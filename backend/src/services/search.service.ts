@@ -247,12 +247,16 @@ Schema:
     };
   }
 
+  private static escapeRegExp(string: string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+  }
+
   private static matchToken(token: string, text: string): boolean {
-    if (text.includes(token)) return true;
-    if (token.endsWith("s") && text.includes(token.slice(0, -1))) return true;
-    if (!token.endsWith("s") && text.includes(token + "s")) return true;
-    if (token.endsWith("'s") && text.includes(token.slice(0, -2))) return true;
-    return false;
+    // Exact word boundary match ignoring case.
+    const escaped = this.escapeRegExp(token);
+    // Allow plural/possessive variants gracefully with boundaries
+    const pattern = new RegExp(`\\b${escaped}(?:s|'s)?\\b`, 'i');
+    return pattern.test(text);
   }
 
   private static rankResults(items: Content[], query: string, aiContext?: string): Content[] {
