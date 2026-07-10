@@ -45,11 +45,6 @@ export const providerKeyStatus = async (req: Request, res: Response, next: NextF
   }
 };
 
-export default { providerKeyStatus };
-import { Request, Response, NextFunction } from "express";
-import { supabase } from "../utils/supabase";
-import { success } from "../utils/response";
-
 export const debugStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as any).user || null;
@@ -66,4 +61,4 @@ export const debugStatus = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export default { debugStatus };
+export default { providerKeyStatus, debugStatus };

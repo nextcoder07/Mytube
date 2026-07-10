@@ -27,22 +27,8 @@ export class GitHubProvider implements ContentProvider {
       }
     }
 
-    // Load backend/env fallback token(s) — supports comma-separated GITHUB_TOKENS or single GITHUB_TOKEN
+    // Only use per-user GitHub tokens. Do NOT use backend environment tokens.
     const envKeys: string[] = [];
-    const rawMultiTokens = process.env.MYTUBE_GITHUB_TOKENS || process.env.GITHUB_TOKENS;
-    if (rawMultiTokens) {
-      const cleaned = rawMultiTokens
-        .trim()
-        .replace(/^['"]|['"]$/g, "")
-        .split(/[,;\n\r]+/)
-        .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
-        .filter((k) => k.length > 0 && !k.includes("your-") && k !== "ghp_...");
-      envKeys.push(...cleaned);
-    }
-    const singleToken = (process.env.MYTUBE_GITHUB_TOKEN || process.env.GITHUB_TOKEN)?.trim().replace(/^['"]|['"]$/g, "");
-    if (singleToken && singleToken !== "ghp_..." && !singleToken.includes("your-") && !envKeys.includes(singleToken)) {
-      envKeys.push(singleToken);
-    }
 
     const userId = options?.userId || "anonymous";
 
@@ -78,7 +64,8 @@ export class GitHubProvider implements ContentProvider {
       "User-Agent": "MyTube-Personalized-Learning",
     };
 
-    const token = userKeyRotationManager.getKey("github", userId, userKeysString, envKeys);
+    // Use only per-user GitHub tokens (no server env tokens)
+    const token = userKeyRotationManager.getKey("github", userId, userKeysString, []);
     if (token) {
       headers["Authorization"] = `token ${token}`;
       // Stash the active token in a custom header for downstream rate-limit handling
@@ -101,7 +88,7 @@ export class GitHubProvider implements ContentProvider {
     userKeyRotationManager.markExhausted("github", userId, activeToken);
 
     // Check if another key is available
-    const nextToken = userKeyRotationManager.getKey("github", userId, userKeysString, envKeys);
+    const nextToken = userKeyRotationManager.getKey("github", userId, userKeysString, []);
     if (!nextToken) {
       console.warn("[GitHubProvider] All GitHub tokens exhausted. Proceeding unauthenticated.");
       return {

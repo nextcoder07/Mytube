@@ -138,35 +138,18 @@ export class YouTubeProvider implements ContentProvider {
       }
     }
 
-    // Load backend/env fallback keys
-    const envKeys: string[] = [];
-    const rawMultiKeys = process.env.MYTUBE_YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEYS;
-    if (rawMultiKeys) {
-      const cleaned = rawMultiKeys
-        .trim()
-        .replace(/^['"]|['"]$/g, "")
-        .split(/[,;\n\r]+/)
-        .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
-        .filter((k) => k.length > 0 && !k.includes("your-"));
-      envKeys.push(...cleaned);
-    }
-    const singleKey = (process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY)?.trim().replace(/^['"]|['"]$/g, "");
-    if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-") && !envKeys.includes(singleKey)) {
-      envKeys.push(singleKey);
-    }
-
     const userId = options?.userId || "anonymous";
 
-    // 2. Perform API search if keys are available
-    const hasKeysAvailable = !!userYoutubeKeysString || envKeys.length > 0;
-    if (hasKeysAvailable) {
+    // Only use per-user API keys. Do NOT fall back to server env keys.
+    const hasUserKeys = !!userYoutubeKeysString;
+    if (hasUserKeys) {
       try {
-        const results = await this.searchViaYouTubeAPI(query, limit, userId, userYoutubeKeysString, envKeys);
+        const results = await this.searchViaYouTubeAPI(query, limit, userId, userYoutubeKeysString, []);
         if (results && results.length > 0) {
           return results;
         }
       } catch (apiErr: any) {
-        console.warn(`[YouTubeProvider] API search failed, falling back to scraping:`, apiErr.message);
+        console.warn(`[YouTubeProvider] API search failed with user keys, falling back to scraping:`, apiErr.message);
       }
     }
 
@@ -187,7 +170,8 @@ export class YouTubeProvider implements ContentProvider {
     userKeysString: string,
     envKeys: string[]
   ): Promise<Content[]> {
-    const apiKey = userKeyRotationManager.getKey("youtube", userId, userKeysString, envKeys);
+    // Use only user-provided keys (envKeys intentionally empty)
+    const apiKey = userKeyRotationManager.getKey("youtube", userId, userKeysString, []);
     if (!apiKey) {
       this.quotaExhausted = true;
       throw new Error("No active YouTube API keys available (all exhausted or empty)");
