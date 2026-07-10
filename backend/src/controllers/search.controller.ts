@@ -17,11 +17,13 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
     }
 
       const providers = req.query.providers
-        ? (req.query.providers as string).split(",").map((p) => p.trim())
+        ? (req.query.providers as string).split(",").map((p) => p.trim().toLowerCase())
         : undefined;
 
-    // Enforce minimum limit of 70 results per source
-    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 70) : 70;
+    const youtubeRequested = !providers || providers.includes('youtube');
+
+    // Enforce a lower minimum limit to reduce unnecessary API pressure
+    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 25) : 25;
 
     // YouTube-optimized filter params
     const order = req.query.order as 'relevance' | 'date' | 'viewCount' | 'rating' | undefined;
@@ -39,7 +41,7 @@ export const search = async (req: Request, res: Response, next: NextFunction) =>
       videoCategoryId,
       relevanceLanguage,
     });
-    const youtubeStatus = providerManager.getProvider("youtube")?.getStatus?.();
+    const youtubeStatus = youtubeRequested ? providerManager.getProvider("youtube")?.getStatus?.() : undefined;
     console.debug("[search.controller] returning results count=", Array.isArray(results) ? results.length : 0);
     res.status(200).json(success(results, "Search completed", { youtubeStatus }));
   } catch (err: any) {
@@ -63,8 +65,8 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
     const videoCategoryId = (req.body.videoCategoryId || req.query.videoCategoryId) as string | undefined;
     const relevanceLanguage = (req.body.relevanceLanguage || req.query.relevanceLanguage) as string | undefined;
 
-    // Enforce minimum limit of 70 results
-    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 70) : 70;
+    // Enforce a lower minimum limit to reduce unnecessary API pressure
+    const limit = req.query.limit ? Math.max(parseInt(req.query.limit as string, 10), 25) : 25;
 
     const options = {
       limit,
@@ -76,8 +78,10 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
       relevanceLanguage,
       aiContext: aiContext || undefined,
     };
+    const providersNormalized = providers?.map((p) => p.toLowerCase());
+    const youtubeRequested = !providersNormalized || providersNormalized.includes('youtube');
     const results = await SearchService.searchAI(userId, query, { ...options, providers });
-    const youtubeStatus = providerManager.getProvider("youtube")?.getStatus?.();
+    const youtubeStatus = youtubeRequested ? providerManager.getProvider("youtube")?.getStatus?.() : undefined;
     res.status(200).json(success(results, "AI Search completed", { youtubeStatus }));
   } catch (err: any) {
     next(err);

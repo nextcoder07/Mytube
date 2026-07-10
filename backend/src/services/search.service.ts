@@ -36,7 +36,7 @@ export class SearchService {
     const fetchBatchSize = searchCache.getFetchSize();
     const startIndex = (page - 1) * visibleLimit;
     const endIndex = page * visibleLimit;
-    const targetCacheSize = Math.max(endIndex, fetchBatchSize, visibleLimit + batchSize);
+    const targetCacheSize = Math.min(fetchBatchSize, Math.max(endIndex, visibleLimit + batchSize));
 
     if (options?.useCache === false) {
       searchCache.clear(query);
