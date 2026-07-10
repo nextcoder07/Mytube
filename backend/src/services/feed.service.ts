@@ -44,13 +44,14 @@ export class FeedService {
 
       const goalQueryParts = effectiveGoals.flatMap((goal) => {
         const parts = [goal.title, goal.category, goal.description];
-        if (goal.priority1) parts.push(`Priority 1: ${goal.priority1}`);
-        if (goal.priority2) parts.push(`Priority 2: ${goal.priority2}`);
-        if (goal.priority3) parts.push(`Priority 3: ${goal.priority3}`);
+        if (goal.priority1) parts.push(goal.priority1);
+        if (goal.priority2) parts.push(goal.priority2);
+        if (goal.priority3) parts.push(goal.priority3);
         return parts.filter(Boolean);
       });
 
-      const query = goalQueryParts.join(' | ');
+      // Use a broader OR-based join to increase recall across providers and scrapers
+      const query = goalQueryParts.join(' OR ');
       const focusedGoalId = effectiveGoals[0]?.id;
 
       const searchOptions: SearchOptions = {

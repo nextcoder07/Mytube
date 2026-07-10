@@ -20,7 +20,7 @@ class YouTubeKeyManager {
   }
 
   private loadKeys() {
-    const rawMultiKeys = process.env.YOUTUBE_API_KEYS;
+    const rawMultiKeys = process.env.MYTUBE_YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEYS;
     if (rawMultiKeys) {
       const cleaned = rawMultiKeys
         .trim()
@@ -36,7 +36,7 @@ class YouTubeKeyManager {
 
     // Fallback to single YOUTUBE_API_KEY
     if (this.keys.length === 0) {
-      const singleKey = process.env.YOUTUBE_API_KEY?.trim().replace(/^['"]|['"]$/g, "");
+      const singleKey = (process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY)?.trim().replace(/^['"]|['"]$/g, "");
       if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-")) {
         this.keys = [singleKey];
       }
@@ -117,7 +117,9 @@ export class YouTubeProvider implements ContentProvider {
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     this.quotaExhausted = false;
-    const limit = Math.max(options?.limit || 70, 70);
+    // Respect the requested limit from callers (feed can request small limits).
+    // Default to 70 when not provided to preserve previous behavior for standalone searches.
+    const limit = options?.limit || 70;
 
     // 1. Resolve custom user YouTube keys and fallback env keys
     let userYoutubeKeysString = "";
@@ -138,7 +140,7 @@ export class YouTubeProvider implements ContentProvider {
 
     // Load backend/env fallback keys
     const envKeys: string[] = [];
-    const rawMultiKeys = process.env.YOUTUBE_API_KEYS;
+    const rawMultiKeys = process.env.MYTUBE_YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEYS;
     if (rawMultiKeys) {
       const cleaned = rawMultiKeys
         .trim()
@@ -148,7 +150,7 @@ export class YouTubeProvider implements ContentProvider {
         .filter((k) => k.length > 0 && !k.includes("your-"));
       envKeys.push(...cleaned);
     }
-    const singleKey = process.env.YOUTUBE_API_KEY?.trim().replace(/^['"]|['"]$/g, "");
+    const singleKey = (process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY)?.trim().replace(/^['"]|['"]$/g, "");
     if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-") && !envKeys.includes(singleKey)) {
       envKeys.push(singleKey);
     }

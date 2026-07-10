@@ -3,7 +3,7 @@ import { Content } from '../../models/content.model';
 import { normalizeVideo } from './normalize';
 
 export async function fetchYouTubeVideo(videoId: string): Promise<Content | null> {
-  const apiKey = process.env.YOUTUBE_API_KEY;
+  const apiKey = process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY;
   if (!apiKey || apiKey.includes('your-') || apiKey === 'AIzaSy...') return null;
 
   const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`;

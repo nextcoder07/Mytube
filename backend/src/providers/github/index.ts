@@ -29,7 +29,7 @@ export class GitHubProvider implements ContentProvider {
 
     // Load backend/env fallback token(s) — supports comma-separated GITHUB_TOKENS or single GITHUB_TOKEN
     const envKeys: string[] = [];
-    const rawMultiTokens = process.env.GITHUB_TOKENS;
+    const rawMultiTokens = process.env.MYTUBE_GITHUB_TOKENS || process.env.GITHUB_TOKENS;
     if (rawMultiTokens) {
       const cleaned = rawMultiTokens
         .trim()
@@ -39,7 +39,7 @@ export class GitHubProvider implements ContentProvider {
         .filter((k) => k.length > 0 && !k.includes("your-") && k !== "ghp_...");
       envKeys.push(...cleaned);
     }
-    const singleToken = process.env.GITHUB_TOKEN?.trim().replace(/^['"]|['"]$/g, "");
+    const singleToken = (process.env.MYTUBE_GITHUB_TOKEN || process.env.GITHUB_TOKEN)?.trim().replace(/^['"]|['"]$/g, "");
     if (singleToken && singleToken !== "ghp_..." && !singleToken.includes("your-") && !envKeys.includes(singleToken)) {
       envKeys.push(singleToken);
     }

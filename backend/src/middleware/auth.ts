@@ -45,3 +45,6 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     next(new HttpError(401, "Invalid Firebase ID token"));
   }
 };
+
+// Backwards-compatible alias used by some routes
+export const requireAuth = authenticate;

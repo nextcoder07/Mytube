@@ -5,12 +5,14 @@ import { RedditProvider } from "./providers/reddit";
 import { GitHubProvider } from "./providers/github";
 
 async function test() {
-  console.log("YOUTUBE_API_KEY in env:", process.env.YOUTUBE_API_KEY);
+  console.log("YOUTUBE API env (MYTUBE_YOUTUBE_API_KEY or YOUTUBE_API_KEY):", process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY);
   
   const yt = new YouTubeProvider();
-  // Strip quotes for test
-  if (process.env.YOUTUBE_API_KEY) {
-    process.env.YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY.replace(/^["']|["']$/g, "");
+  // Prefer MYTUBE_YOUTUBE_API_KEY for this project but fall back to YOUTUBE_API_KEY
+  const envYt = process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY;
+  if (envYt) {
+    process.env.MYTUBE_YOUTUBE_API_KEY = envYt.replace(/^\s*["']|["']\s*$/g, "").trim();
+    process.env.YOUTUBE_API_KEY = process.env.MYTUBE_YOUTUBE_API_KEY;
   }
   console.log("Searching YouTube...");
   const ytResults = await yt.search("car", { limit: 100 });

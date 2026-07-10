@@ -16,6 +16,11 @@ import debugRouter from './debug.routes';
 const router = Router();
 
 router.use("/auth", authRouter);
+// Mount debug routes only in development
+import config from "../config";
+if (config.nodeEnv === "development") {
+	router.use("/debug", debugRouter);
+}
 router.use("/user", userRouter);
 router.use("/goals", goalsRouter);
 router.use("/search", searchRouter);

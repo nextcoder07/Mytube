@@ -3,7 +3,7 @@ import { Content } from '../../models/content.model';
 import { normalizeRepo } from './normalize';
 
 export async function fetchGitHubRepo(owner: string, repo: string): Promise<Content | null> {
-  const token = process.env.GITHUB_TOKEN;
+  const token = process.env.MYTUBE_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github.v3+json',
     'User-Agent': 'MyTube-Personalized-Learning',
