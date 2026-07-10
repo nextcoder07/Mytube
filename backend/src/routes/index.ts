@@ -12,14 +12,14 @@ import aiRouter from "./ai.routes";
 import analyticsRouter from "./analytics.routes";
 import statusRouter from './status.routes';
 import debugRouter from './debug.routes';
+import config from "../config";
 
 const router = Router();
 
 router.use("/auth", authRouter);
 // Mount debug routes only in development
-import config from "../config";
 if (config.nodeEnv === "development") {
-	router.use("/debug", debugRouter);
+  router.use("/debug", debugRouter);
 }
 router.use("/user", userRouter);
 router.use("/goals", goalsRouter);
@@ -31,10 +31,6 @@ router.use("/summary", summaryRouter);
 router.use("/ai", aiRouter);
 router.use("/analytics", analyticsRouter);
 router.use('/status', statusRouter);
-// Mount debug routes only in development
-import config from "../config";
-if (config.nodeEnv === "development") {
-	router.use("/debug", debugRouter);
-}
+
 
 export default router;
