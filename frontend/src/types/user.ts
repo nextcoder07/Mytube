@@ -29,6 +29,8 @@ export interface Profile {
   dailyGoalMinutes: number;
   streak: number;
   totalXp: number;
+  user_youtube_api_keys?: string;
+  user_github_api_keys?: string;
 }
 
 export interface Goal {

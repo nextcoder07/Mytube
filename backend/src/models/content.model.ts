@@ -39,6 +39,7 @@ export interface SearchOptions {
   after?: string;
   // Cache control
   useCache?: boolean;
+  userId?: string;
 }
 
 export interface ProviderSearchResult {

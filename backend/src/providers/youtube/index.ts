@@ -2,6 +2,8 @@
 import { ContentProvider } from "../base.provider";
 import { Content, SearchOptions } from "../../models/content.model";
 import cheerio from "cheerio";
+import { supabase } from "../../config/supabase";
+import { userKeyRotationManager } from "../../utils/userKeyManager";
 
 /**
  * Manages multiple YouTube API keys with automatic rotation.
@@ -116,13 +118,178 @@ export class YouTubeProvider implements ContentProvider {
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
     this.quotaExhausted = false;
     const limit = Math.max(options?.limit || 70, 70);
+
+    // 1. Resolve custom user YouTube keys and fallback env keys
+    let userYoutubeKeysString = "";
+    if (options?.userId && options.userId !== "anonymous") {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_youtube_api_keys")
+          .eq("id", options.userId)
+          .single();
+        if (profile?.user_youtube_api_keys) {
+          userYoutubeKeysString = profile.user_youtube_api_keys;
+        }
+      } catch (err: any) {
+        console.error("[YouTubeProvider] Failed to fetch user YouTube API keys:", err.message);
+      }
+    }
+
+    // Load backend/env fallback keys
+    const envKeys: string[] = [];
+    const rawMultiKeys = process.env.YOUTUBE_API_KEYS;
+    if (rawMultiKeys) {
+      const cleaned = rawMultiKeys
+        .trim()
+        .replace(/^['"]|['"]$/g, "")
+        .split(/[,;\n\r]+/)
+        .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
+        .filter((k) => k.length > 0 && !k.includes("your-"));
+      envKeys.push(...cleaned);
+    }
+    const singleKey = process.env.YOUTUBE_API_KEY?.trim().replace(/^['"]|['"]$/g, "");
+    if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-") && !envKeys.includes(singleKey)) {
+      envKeys.push(singleKey);
+    }
+
+    const userId = options?.userId || "anonymous";
+
+    // 2. Perform API search if keys are available
+    const hasKeysAvailable = !!userYoutubeKeysString || envKeys.length > 0;
+    if (hasKeysAvailable) {
+      try {
+        const results = await this.searchViaYouTubeAPI(query, limit, userId, userYoutubeKeysString, envKeys);
+        if (results && results.length > 0) {
+          return results;
+        }
+      } catch (apiErr: any) {
+        console.warn(`[YouTubeProvider] API search failed, falling back to scraping:`, apiErr.message);
+      }
+    }
+
+    // 3. Fallback to scraping
     if (this.isChannelQuery(query)) {
       const results = await this.searchChannel(query, limit);
-      console.debug(`[YouTube] Channel search for "${query}" returned ${results.length} results`);
+      console.debug(`[YouTube Scrape] Channel search for "${query}" returned ${results.length} results`);
       return results;
     }
 
     return await this.searchViaYouTubeHTML(query, limit);
+  }
+
+  private async searchViaYouTubeAPI(
+    query: string,
+    limit: number,
+    userId: string,
+    userKeysString: string,
+    envKeys: string[]
+  ): Promise<Content[]> {
+    const apiKey = userKeyRotationManager.getKey("youtube", userId, userKeysString, envKeys);
+    if (!apiKey) {
+      this.quotaExhausted = true;
+      throw new Error("No active YouTube API keys available (all exhausted or empty)");
+    }
+
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(
+        query
+      )}&maxResults=${Math.min(limit, 50)}&key=${apiKey}`;
+
+      const res = await fetch(url);
+      if (res.status === 403 || res.status === 429) {
+        console.warn(`[YouTubeProvider] Key ${apiKey.substring(0, 8)}... hit rate limit/quota (status ${res.status}). Rotating...`);
+        userKeyRotationManager.markExhausted("youtube", userId, apiKey);
+        
+        // Remove the exhausted key from candidates list and retry
+        let updatedUserKeysString = userKeysString;
+        let updatedEnvKeys = envKeys;
+        if (userKeysString.includes(apiKey)) {
+          updatedUserKeysString = userKeysString
+            .split(",")
+            .map(k => k.trim())
+            .filter(k => k !== apiKey)
+            .join(",");
+        } else {
+          updatedEnvKeys = envKeys.filter(k => k !== apiKey);
+        }
+        return this.searchViaYouTubeAPI(query, limit, userId, updatedUserKeysString, updatedEnvKeys);
+      }
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`YouTube API returned ${res.status}: ${errorText}`);
+      }
+
+      const data: any = await res.json();
+      const items = data.items || [];
+
+      // Fetch detail (durations/views) for parsed video ids
+      const videoIds = items.map((item: any) => item.id?.videoId).filter(Boolean);
+      let detailsMap = new Map<string, { duration: number; viewCount?: number }>();
+      
+      if (videoIds.length > 0) {
+        try {
+          const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds.join(
+            ","
+          )}&key=${apiKey}`;
+          const detailsRes = await fetch(detailsUrl);
+          if (detailsRes.ok) {
+            const detailsData: any = await detailsRes.json();
+            (detailsData.items || []).forEach((vItem: any) => {
+              detailsMap.set(vItem.id, {
+                duration: this.parseISO8601Duration(vItem.contentDetails?.duration),
+                viewCount: parseInt(vItem.statistics?.viewCount ?? "0", 10),
+              });
+            });
+          }
+        } catch (detailErr) {
+          console.warn("[YouTubeProvider] Failed to fetch video details:", detailErr);
+        }
+      }
+
+      return items.map((item: any): Content => {
+        const videoId = item.id?.videoId;
+        const details = detailsMap.get(videoId);
+        return {
+          id: `youtube_${videoId}`,
+          title: item.snippet.title,
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          source: "youtube",
+          type: "video",
+          thumbnail: item.snippet.thumbnails?.high?.url ?? item.snippet.thumbnails?.default?.url,
+          description: item.snippet.description,
+          author: item.snippet.channelTitle,
+          duration: details ? details.duration : 0,
+          viewCount: details ? details.viewCount : undefined,
+          tags: [this.name, "youtube"],
+          language: "en",
+          metadata: {
+            channelId: item.snippet.channelId,
+          },
+          createdAt: new Date(item.snippet.publishedAt),
+        };
+      });
+    } catch (err: any) {
+      console.error(`[YouTubeProvider] Error using key ${apiKey.substring(0, 8)}...:`, err.message);
+      // Fallback: mark as exhausted and retry
+      userKeyRotationManager.markExhausted("youtube", userId, apiKey);
+      let updatedUserKeysString = userKeysString;
+      let updatedEnvKeys = envKeys;
+      if (userKeysString.includes(apiKey)) {
+        updatedUserKeysString = userKeysString
+          .split(",")
+          .map(k => k.trim())
+          .filter(k => k !== apiKey)
+          .join(",");
+      } else {
+        updatedEnvKeys = envKeys.filter(k => k !== apiKey);
+      }
+      if (updatedUserKeysString || updatedEnvKeys.length > 0) {
+        return this.searchViaYouTubeAPI(query, limit, userId, updatedUserKeysString, updatedEnvKeys);
+      }
+      throw err;
+    }
   }
 
   private async searchViaYouTubeHTML(query: string, limit: number): Promise<Content[]> {

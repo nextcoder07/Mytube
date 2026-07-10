@@ -59,6 +59,7 @@ export class SearchService {
 
         const providerResults = await providerManager.searchProvider(source, query, {
           ...options,
+          userId,
           providers: [source],
           limit: additionalFetch,
         });
