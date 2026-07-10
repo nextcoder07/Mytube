@@ -546,7 +546,7 @@ export class YouTubeProvider implements ContentProvider {
         throw new Error("Unable to parse channel page data from YouTube");
       }
 
-      const headerData = this.extractChannelHeaderData(initialData);
+      const headerData = this.extractChannelHeaderData(initialData, channelHandle);
       if (headerData?.channelId) {
         results.push({
           id: `youtube_channel_${headerData.channelId}`,
@@ -603,7 +603,7 @@ export class YouTubeProvider implements ContentProvider {
     return `https://www.youtube.com/@${channelHandle}/videos`;
   }
 
-  private extractChannelHeaderData(data: any) {
+  private extractChannelHeaderData(data: any, channelHandle: string) {
     let header: any = null;
     const collect = (node: any) => {
       if (!node || typeof node !== "object") return;
