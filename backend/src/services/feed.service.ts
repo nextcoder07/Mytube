@@ -9,7 +9,7 @@ export class FeedService {
    * Get personalized feed. If user has active goals, return content matching those goals.
    * Otherwise, return a mixed feed of general tech topics.
    */
-  static async getFeed(userId: string, page = 1, limit = 10) {
+  static async getFeed(userId: string, page = 1, limit = 10, providers?: string[]) {
     try {
       // 1. Fetch active goals and context
       const goals = await GoalsService.getGoals(userId);
@@ -23,10 +23,13 @@ export class FeedService {
         goalId = activeGoals[0].id;
       }
 
+      const availableProviders = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
+      const selectedProviders = providers && providers.length > 0 ? providers : availableProviders;
+
       // 2. Perform search across providers with goal-aware ranking if possible
       const searchOptions: SearchOptions = {
         limit: limit * 2,
-        providers: ["youtube", "github", "reddit", "medium"],
+        providers: selectedProviders,
         goalId,
         aiContext: goalContext,
       };

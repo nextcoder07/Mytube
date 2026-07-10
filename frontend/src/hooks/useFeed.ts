@@ -1,5 +1,5 @@
 // frontend/src/hooks/useFeed.ts
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { Content } from '../types/content';
 
@@ -19,28 +19,48 @@ function isRecommendationItem(item: unknown): item is { content: Content } {
   );
 }
 
-export function useFeed(recommended = false) {
+export function useFeed(recommended = false, providerIds: string[] = [], limit = 12) {
   const endpoint = recommended ? '/feed/recommended' : '/feed';
+  const providerKey = providerIds.slice().sort().join(',');
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['feed', endpoint],
-    queryFn: async () => {
-      const res = await api.get(endpoint);
-      return res.data;
+  const {
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteQuery<FeedResponsePayload | Content[]>({
+    queryKey: ['feed', endpoint, providerKey, limit],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params: Record<string, string | number> = { page: pageParam, limit };
+      if (!recommended && providerIds.length > 0) {
+        params.providers = providerIds.join(',');
+      }
+
+      const res = await api.get(endpoint, { params });
+      return res.data?.data;
+    },
+    getNextPageParam: (lastPage) => {
+      if (Array.isArray(lastPage)) return undefined;
+      return lastPage.hasMore ? (lastPage.page || 1) + 1 : undefined;
     },
     staleTime: 1000 * 60 * 10, // 10 min
   });
 
-  let items: Content[] = [];
-  const payload = data?.data as unknown;
+  const items = data?.pages.flatMap((page) => {
+    if (Array.isArray(page)) return page as Content[];
+    return page?.content || [];
+  }) || [];
 
-  if (Array.isArray(payload)) {
-    items = payload.map((item) =>
-      isRecommendationItem(item) ? item.content : (item as Content)
-    );
-  } else if (typeof payload === 'object' && payload !== null && 'content' in payload) {
-    items = (payload as FeedResponsePayload).content || [];
-  }
-
-  return { items, isLoading, error, refetch };
+  return {
+    items,
+    isLoading,
+    error,
+    refetch,
+    loadMore: fetchNextPage,
+    hasMore: !!hasNextPage,
+    isFetchingNextPage,
+  };
 }

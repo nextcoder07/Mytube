@@ -11,8 +11,11 @@ export const getFeed = async (req: Request, res: Response, next: NextFunction) =
 
     const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+    const providers = req.query.providers
+      ? (req.query.providers as string).split(",").map((provider) => provider.trim()).filter(Boolean)
+      : undefined;
 
-    const feed = await FeedService.getFeed(user.uid, page, limit);
+    const feed = await FeedService.getFeed(user.uid, page, limit, providers);
     res.status(200).json(success(feed, "Feed fetched successfully"));
   } catch (err: any) {
     next(err);

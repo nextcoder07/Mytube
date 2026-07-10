@@ -11,6 +11,7 @@ import summaryRouter from "./summary.routes";
 import aiRouter from "./ai.routes";
 import analyticsRouter from "./analytics.routes";
 import statusRouter from './status.routes';
+import debugRouter from './debug.routes';
 
 const router = Router();
 
@@ -25,5 +26,10 @@ router.use("/summary", summaryRouter);
 router.use("/ai", aiRouter);
 router.use("/analytics", analyticsRouter);
 router.use('/status', statusRouter);
+// Mount debug routes only in development
+import config from "../config";
+if (config.nodeEnv === "development") {
+	router.use("/debug", debugRouter);
+}
 
 export default router;

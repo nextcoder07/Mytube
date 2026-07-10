@@ -11,6 +11,7 @@ import {
   CheckCircleIcon,
   BookOpenIcon,
   CalendarIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 
 export default function GoalsPage() {
@@ -20,12 +21,14 @@ export default function GoalsPage() {
     roadmaps,
     isLoading,
     createGoal,
+    updateGoal,
     deleteGoal,
     generateRoadmap,
     isGeneratingRoadmap,
   } = useGoals();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority1, setPriority1] = useState("");
@@ -49,17 +52,34 @@ export default function GoalsPage() {
     }
 
     try {
-      await createGoal({
-        title,
-        description,
-        category,
-        difficulty,
-        targetDate: targetDate || undefined,
-        priority1: priority1 || undefined,
-        priority2: priority2 || undefined,
-        priority3: priority3 || undefined,
-      });
-      setFormSuccess("Goal added successfully!");
+      if (editingGoalId) {
+        await updateGoal({
+          id: editingGoalId,
+          updates: {
+            title,
+            description,
+            category,
+            difficulty,
+            targetDate: targetDate || undefined,
+            priority1: priority1 || undefined,
+            priority2: priority2 || undefined,
+            priority3: priority3 || undefined,
+          },
+        });
+        setFormSuccess("Goal updated successfully!");
+      } else {
+        await createGoal({
+          title,
+          description,
+          category,
+          difficulty,
+          targetDate: targetDate || undefined,
+          priority1: priority1 || undefined,
+          priority2: priority2 || undefined,
+          priority3: priority3 || undefined,
+        });
+        setFormSuccess("Goal added successfully!");
+      }
       setTitle("");
       setDescription("");
       setPriority1("");
@@ -68,6 +88,8 @@ export default function GoalsPage() {
       setCategory("General");
       setDifficulty("beginner");
       setTargetDate("");
+      setEditingGoalId(null);
+      setIsModalOpen(false);
     } catch (err: unknown) {
       console.error("Failed to create goal:", err);
       const message =
@@ -109,7 +131,20 @@ export default function GoalsPage() {
           </p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingGoalId(null);
+            setTitle("");
+            setDescription("");
+            setPriority1("");
+            setPriority2("");
+            setPriority3("");
+            setCategory("General");
+            setDifficulty("beginner");
+            setTargetDate("");
+            setFormError(null);
+            setFormSuccess(null);
+            setIsModalOpen(true);
+          }}
           className="btn-neon flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
         >
           <PlusIcon className="w-5 h-5" />
@@ -178,16 +213,42 @@ export default function GoalsPage() {
                         </span>
                       )}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteGoal(goal.id);
-                      }}
-                      className="p-1 text-gray-500 hover:text-red-400 hover:bg-gray-800/40 rounded transition-colors"
-                      title="Delete goal"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // populate modal with existing goal for editing
+                          setEditingGoalId(goal.id);
+                          setTitle(goal.title || "");
+                          setDescription(goal.description || "");
+                          setPriority1(goal.priority1 || "");
+                          setPriority2(goal.priority2 || "");
+                          setPriority3(goal.priority3 || "");
+                          setCategory(goal.category || "General");
+                          setDifficulty((goal.difficulty as any) || "beginner");
+                          setTargetDate(goal.targetDate || "");
+                          setFormError(null);
+                          setFormSuccess(null);
+                          setIsModalOpen(true);
+                        }}
+                        className="p-1 text-gray-500 hover:text-violet-400 hover:bg-gray-800/40 rounded transition-colors"
+                        title="Edit goal"
+                      >
+                        <PencilSquareIcon className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!confirm("Delete this goal? This action cannot be undone.")) return;
+                          deleteGoal(goal.id);
+                        }}
+                        className="p-1 text-gray-500 hover:text-red-400 hover:bg-gray-800/40 rounded transition-colors"
+                        title="Delete goal"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   
                   <h3 className="text-base font-bold text-white mt-2 group-hover:text-violet-400">
@@ -379,7 +440,10 @@ export default function GoalsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingGoalId(null);
+                }}
                 className="text-sm font-semibold text-gray-400 hover:text-white transition-colors"
               >
                 Close
@@ -497,6 +561,7 @@ export default function GoalsPage() {
                     setIsModalOpen(false);
                     setFormError(null);
                     setFormSuccess(null);
+                    setEditingGoalId(null);
                   }}
                   className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
                 >
@@ -507,7 +572,7 @@ export default function GoalsPage() {
                   onClick={handleSubmit}
                   className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl text-sm font-bold shadow transition-colors"
                 >
-                  Save Goal
+                  {editingGoalId ? "Update Goal" : "Save Goal"}
                 </button>
               </div>
             </form>
