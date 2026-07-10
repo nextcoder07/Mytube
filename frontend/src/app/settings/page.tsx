@@ -82,7 +82,7 @@ export default function SettingsPage() {
   const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const { token, user } = useAuthStore();
+  const { token } = useAuthStore();
 
   // Fetch profile on mount to populate existing keys
   const fetchProfile = useCallback(async () => {
@@ -102,7 +102,7 @@ export default function SettingsPage() {
         }
         setKeyValues(initial);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to fetch profile for settings:', err);
     } finally {
       setLoadingProfile(false);
@@ -130,8 +130,9 @@ export default function SettingsPage() {
       setTimeout(() => {
         setSaveStatus((prev) => ({ ...prev, [config.id]: 'idle' }));
       }, 3000);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Failed to save';
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+      const msg = axiosError?.response?.data?.message || axiosError?.message || 'Failed to save';
       setSaveErrors((prev) => ({ ...prev, [config.id]: msg }));
       setSaveStatus((prev) => ({ ...prev, [config.id]: 'error' }));
       setTimeout(() => {
@@ -299,8 +300,9 @@ export default function SettingsPage() {
                           );
                           setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'saved' }));
                           setTimeout(() => setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'idle' })), 3000);
-                        } catch (err: any) {
-                          setSaveErrors((prev) => ({ ...prev, [cfg.id]: err?.response?.data?.message || 'Failed to clear' }));
+                        } catch (err: unknown) {
+                          const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+                          setSaveErrors((prev) => ({ ...prev, [cfg.id]: axiosError?.response?.data?.message || axiosError?.message || 'Failed to clear' }));
                           setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'error' }));
                           setTimeout(() => setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'idle' })), 5000);
                         }
@@ -338,7 +340,7 @@ export default function SettingsPage() {
             <InformationCircleIcon className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-xs text-blue-300/80 space-y-1">
               <p><strong>How rotation works:</strong> When one key hits its rate limit, the system automatically switches to the next key in a cyclic fashion. Exhausted keys are retried after a 1-hour cooldown.</p>
-              <p>Keys for AI features (Gemini) are managed server-side and don't need to be added here.</p>
+              <p>Keys for AI features (Gemini) are managed server-side and don&apos;t need to be added here.</p>
             </div>
           </div>
         )}
