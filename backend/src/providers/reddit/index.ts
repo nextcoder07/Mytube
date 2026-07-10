@@ -6,12 +6,12 @@ export class RedditProvider implements ContentProvider {
   name = "reddit";
 
   async search(query: string, options?: SearchOptions): Promise<Content[]> {
-    if (!process.env.REDDIT_CLIENT_ID || !process.env.REDDIT_CLIENT_SECRET) {
-      console.warn("[Reddit] Reddit API credentials are not configured. Reddit search is disabled.");
-      return [];
-    }
-
     const limit = Math.max(options?.limit || 70, 70);
+
+    if (!process.env.REDDIT_CLIENT_ID || !process.env.REDDIT_CLIENT_SECRET) {
+      console.warn("[Reddit] Reddit API credentials are not configured. Falling back to DuckDuckGo web search for Reddit content.");
+      return await this.searchViaDDG(query, limit);
+    }
     
     try {
       const totalToFetch = limit;
