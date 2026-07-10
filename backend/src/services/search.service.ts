@@ -30,27 +30,32 @@ export class SearchService {
     const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
     console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
 
+    const page = options?.page && options.page > 0 ? options.page : 1;
     const visibleLimit = options?.limit || 70;
     const batchSize = searchCache.getBatchSize();
     const fetchBatchSize = searchCache.getFetchSize();
-    const topCount = Math.max(batchSize, visibleLimit);
-    const targetCacheSize = visibleLimit + batchSize; // keep one extra page available in cache
+    const startIndex = (page - 1) * visibleLimit;
+    const endIndex = page * visibleLimit;
+    const targetCacheSize = Math.max(endIndex, fetchBatchSize, visibleLimit + batchSize);
+
+    if (options?.useCache === false) {
+      searchCache.clear(query);
+    }
 
     const providerPromises = providers.map(async (source) => {
-      const cachedItems = searchCache.getAll(query, source);
+      const cachedItems = options?.useCache === false ? [] : searchCache.getAll(query, source);
       const cachedLength = cachedItems?.length ?? 0;
-      const cacheMaxSize = targetCacheSize;
 
-      if (cachedItems && cachedLength > cacheMaxSize) {
-        searchCache.trim(query, cacheMaxSize, source);
+      if (cachedItems && cachedLength > targetCacheSize) {
+        searchCache.trim(query, targetCacheSize, source);
       }
 
-      const needsFetch = (searchCache.getAll(query, source)?.length ?? 0) < cacheMaxSize;
+      const needsFetch = cachedLength < targetCacheSize;
       if (needsFetch) {
-        const currentCached = searchCache.getAll(query, source) ?? [];
+        const currentCached = cachedItems ?? [];
         const additionalFetch = currentCached.length === 0
           ? fetchBatchSize
-          : Math.max(batchSize, cacheMaxSize - currentCached.length);
+          : Math.max(batchSize, targetCacheSize - currentCached.length);
 
         const providerResults = await providerManager.searchProvider(source, query, {
           ...options,
@@ -63,7 +68,7 @@ export class SearchService {
         searchCache.set(query, sortedResults, source);
       }
 
-      return searchCache.getTop(query, topCount, source) || [];
+      return searchCache.getAll(query, source) || [];
     });
 
     const sourceResultsArray = await Promise.all(providerPromises);
@@ -126,7 +131,10 @@ export class SearchService {
       ? ranked.filter((item) => !options.excludeIds?.includes(item.id))
       : ranked;
 
-    const sliced = options?.limit ? filtered.slice(0, options.limit) : filtered;
+    const sliced = options?.limit
+      ? filtered.slice(startIndex, endIndex)
+      : filtered.slice(startIndex, endIndex);
+
     if ((sliced || []).length === 0) {
       console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")} excludeIds=${options?.excludeIds?.length || 0}`);
     }

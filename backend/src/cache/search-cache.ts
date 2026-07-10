@@ -8,8 +8,8 @@ import { Content } from "../models/content.model";
 export class SearchCache {
   private memoryCache = new Map<string, CachedSearchResult>();
   private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-  private readonly BATCH_SIZE = 70; // Results to show per page
-  private readonly FETCH_SIZE = 140; // Fetch 100-140 results per source for caching and ranking
+  private readonly BATCH_SIZE = 100; // Results to show per page
+  private readonly FETCH_SIZE = 200; // Fetch up to 200 results per source for cache and ranking
 
   /**
    * Generate cache key from query and optional source

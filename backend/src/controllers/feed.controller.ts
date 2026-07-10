@@ -17,8 +17,10 @@ export const getFeed = async (req: Request, res: Response, next: NextFunction) =
     const excludeIds = req.query.excludeIds
       ? (req.query.excludeIds as string).split(",").map((id) => id.trim()).filter(Boolean)
       : undefined;
+    const goalId = req.query.goalId ? String(req.query.goalId) : undefined;
+    const useCache = req.query.useCache === "false" || req.query.clearCache === "true" || req.query.clearCache === "1" ? false : true;
 
-    const feed = await FeedService.getFeed(user.uid, page, limit, providers, excludeIds);
+    const feed = await FeedService.getFeed(user.uid, page, limit, providers, excludeIds, goalId, useCache);
     res.status(200).json(success(feed, "Feed fetched successfully"));
   } catch (err: any) {
     next(err);

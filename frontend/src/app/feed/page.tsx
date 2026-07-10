@@ -1,6 +1,6 @@
 'use client';
 // frontend/src/app/feed/page.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ContentGrid from '../../components/content/ContentGrid';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -20,22 +20,35 @@ const providerOptions = [
 
 export default function FeedPage() {
   const [selectedProviders, setSelectedProviders] = useState<string[]>(providerOptions.map((p) => p.id));
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const watchHistoryIds = usePlayerStore((state) => state.watchHistory.map((entry) => entry.content.id));
   const goalHistoryIds = usePlayerStore((state) => state.goalHistory.map((entry) => entry.content.id));
   const excludedIds = Array.from(new Set([...watchHistoryIds, ...goalHistoryIds]));
 
+  const { goals, isLoading: goalsLoading } = useGoals();
+  const activeGoals = goals.filter((goal) => goal.status === 'active');
+
+  useEffect(() => {
+    if (activeGoals.length > 0 && !selectedGoalId) {
+      setSelectedGoalId(activeGoals[0].id);
+    }
+  }, [activeGoals, selectedGoalId]);
+
   const { items, isLoading, error, loadMore, hasMore, isFetchingNextPage } = useFeed(
     false,
     selectedProviders,
     excludedIds,
-    12
+    12,
+    selectedGoalId ?? undefined,
+    refreshKey
   );
-  const { goals, isLoading: goalsLoading } = useGoals();
 
-  const hasGoals = goals.length > 0;
+  const hasGoals = activeGoals.length > 0;
+  const focusedGoal = selectedGoalId ? activeGoals.find((goal) => goal.id === selectedGoalId) : null;
   const displayItems = items;
-  const title = hasGoals ? 'Goal Feed' : 'Create a Goal First';
+  const title = hasGoals ? 'Focused Goal Feed' : 'Create a Goal First';
 
   const toggleProvider = (providerId: string) => {
     setSelectedProviders((prev) =>
@@ -58,6 +71,53 @@ export default function FeedPage() {
         </div>
       </div>
 
+      <div className="rounded-3xl border border-gray-800 bg-gray-900/60 p-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <span className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Focus topic</span>
+            <h2 className="text-lg font-semibold text-white mt-2">{focusedGoal ? focusedGoal.title : 'All active goals'}</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {focusedGoal
+                ? focusedGoal.description || 'Focused on this goal to reduce distraction and keep the feed goal-aligned.'
+                : 'Using all active goals for a broader goal feed. Pick one goal to stay more focused.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setSelectedGoalId(null)}
+              className={`px-3 py-2 rounded-full text-xs font-semibold transition border ${
+                !selectedGoalId
+                  ? 'bg-violet-600 text-white border-violet-500'
+                  : 'bg-gray-950 text-gray-400 border-gray-800 hover:text-white hover:border-gray-700'
+              }`}
+            >
+              All active goals
+            </button>
+            {activeGoals.map((goal) => {
+              const active = selectedGoalId === goal.id;
+              return (
+                <button
+                  key={goal.id}
+                  onClick={() => setSelectedGoalId(goal.id)}
+                  className={`px-3 py-2 rounded-full text-xs font-semibold transition border ${
+                    active
+                      ? 'bg-violet-600 text-white border-violet-500'
+                      : 'bg-gray-950 text-gray-400 border-gray-800 hover:text-white hover:border-gray-700'
+                  }`}
+                >
+                  {goal.title}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setRefreshKey((prev) => prev + 1)}
+              className="px-3 py-2 rounded-full text-xs font-semibold bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition"
+            >
+              Refresh feed
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="rounded-3xl border border-gray-800 bg-gray-900/60 p-4">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Sources</span>

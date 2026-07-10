@@ -10,7 +10,15 @@ export class FeedService {
    * Get personalized feed. If user has active goals, return content matching those goals.
    * Otherwise, return a mixed feed of general tech topics.
    */
-  static async getFeed(userId: string, page = 1, limit = 10, providers?: string[], excludeIds?: string[]) {
+  static async getFeed(
+    userId: string,
+    page = 1,
+    limit = 10,
+    providers?: string[],
+    excludeIds?: string[],
+    goalId?: string,
+    useCache = true
+  ) {
     try {
       // 1. Fetch active goals and context
       const goals = await GoalsService.getGoals(userId);
@@ -18,6 +26,11 @@ export class FeedService {
       if (activeGoals.length === 0) {
         return { content: [], page, hasMore: false };
       }
+
+      const focusGoals = goalId
+        ? activeGoals.filter((goal) => goal.id === goalId)
+        : activeGoals;
+      const effectiveGoals = focusGoals.length > 0 ? focusGoals : activeGoals;
 
       const goalContext = await GoalsService.getActiveGoalContext(userId);
       const userProfile = await UserService.getProfile(userId).catch(() => null);
@@ -29,7 +42,7 @@ export class FeedService {
       const availableProviders = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
       const selectedProviders = providers && providers.length > 0 ? providers : availableProviders;
 
-      const goalQueryParts = activeGoals.flatMap((goal) => {
+      const goalQueryParts = effectiveGoals.flatMap((goal) => {
         const parts = [goal.title, goal.category, goal.description];
         if (goal.priority1) parts.push(`Priority 1: ${goal.priority1}`);
         if (goal.priority2) parts.push(`Priority 2: ${goal.priority2}`);
@@ -38,25 +51,24 @@ export class FeedService {
       });
 
       const query = goalQueryParts.join(' | ');
-      const goalId = activeGoals[0].id;
+      const focusedGoalId = effectiveGoals[0]?.id;
 
       const searchOptions: SearchOptions = {
-        limit: limit * 2,
+        page,
+        limit,
         providers: selectedProviders,
-        goalId,
+        goalId: focusedGoalId,
         aiContext: [goalContext, profileContextParts.join('. ')].filter(Boolean).join('. '),
         excludeIds,
+        useCache,
       };
 
       const contentList = await SearchService.search(userId, query, searchOptions);
 
-      const start = (page - 1) * limit;
-      const paginated = contentList.slice(start, start + limit);
-
       return {
-        content: paginated,
+        content: contentList,
         page,
-        hasMore: contentList.length > start + limit,
+        hasMore: contentList.length === limit,
       };
     } catch (err: any) {
       console.error("Feed error, returning empty list:", err.message);
