@@ -78,7 +78,7 @@ export const searchAI = async (req: Request, res: Response, next: NextFunction) 
       relevanceLanguage,
       aiContext: aiContext || undefined,
     };
-    const providersNormalized = providers?.map((p) => p.toLowerCase());
+    const providersNormalized = providers?.map((p: string) => p.toLowerCase());
     const youtubeRequested = !providersNormalized || providersNormalized.includes('youtube');
     const results = await SearchService.searchAI(userId, query, { ...options, providers });
     const youtubeStatus = youtubeRequested ? providerManager.getProvider("youtube")?.getStatus?.() : undefined;

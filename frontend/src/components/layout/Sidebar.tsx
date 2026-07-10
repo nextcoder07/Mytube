@@ -17,6 +17,7 @@ import {
   Squares2X2Icon,
   ChevronLeftIcon,
   XMarkIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 
 const navigation = [
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Goals", href: "/goals", icon: Squares2X2Icon }, // Using Squares2X2Icon or another icon
   { name: "Feed", href: "/feed", icon: PlayCircleIcon },
   { name: "Search", href: "/search", icon: MagnifyingGlassIcon },
+  { name: "History", href: "/history", icon: ClockIcon },
   { name: "Playlists", href: "/playlist", icon: QueueListIcon },
   { name: "Notes", href: "/notes", icon: DocumentTextIcon },
   { name: "AI Chat", href: "/chat", icon: ChatBubbleLeftRightIcon },

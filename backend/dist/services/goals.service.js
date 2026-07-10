@@ -18,7 +18,8 @@ class GoalsService {
             .order("created_at", { ascending: false });
         if (error)
             throw error;
-        return (data || []);
+        // Normalize DB snake_case -> camelCase for the API contract
+        return (data || []).map((r) => GoalsService.normalizeGoalRecord(r));
     }
     static async createGoal(userId, goalData) {
         const { data, error } = await supabase_1.supabase
@@ -30,6 +31,9 @@ class GoalsService {
             category: goalData.category || "General",
             difficulty: goalData.difficulty || "beginner",
             target_date: goalData.targetDate,
+            priority1: goalData.priority1,
+            priority2: goalData.priority2,
+            priority3: goalData.priority3,
             status: "active",
             use_in_search: goalData.useInSearch !== undefined ? goalData.useInSearch : true,
         })
@@ -37,7 +41,7 @@ class GoalsService {
             .single();
         if (error || !data)
             throw error || new Error("Failed to create goal");
-        return data;
+        return GoalsService.normalizeGoalRecord(data);
     }
     static async updateGoal(userId, goalId, updates) {
         const dbUpdates = {};
@@ -51,8 +55,12 @@ class GoalsService {
             dbUpdates.difficulty = updates.difficulty;
         if (updates.targetDate !== undefined)
             dbUpdates.target_date = updates.targetDate;
-        if (updates.status !== undefined)
-            dbUpdates.status = updates.status;
+        if (updates.priority1 !== undefined)
+            dbUpdates.priority1 = updates.priority1;
+        if (updates.priority2 !== undefined)
+            dbUpdates.priority2 = updates.priority2;
+        if (updates.priority3 !== undefined)
+            dbUpdates.priority3 = updates.priority3;
         if (updates.useInSearch !== undefined)
             dbUpdates.use_in_search = updates.useInSearch;
         const { data, error } = await supabase_1.supabase
@@ -64,7 +72,7 @@ class GoalsService {
             .single();
         if (error || !data)
             throw error || new Error("Failed to update goal");
-        return data;
+        return GoalsService.normalizeGoalRecord(data);
     }
     static async deleteGoal(userId, goalId) {
         const { error } = await supabase_1.supabase
@@ -164,6 +172,9 @@ class GoalsService {
             .single();
         if (error)
             throw error;
+        // normalize nested goal if present
+        if (data && data.goals)
+            data.goals = GoalsService.normalizeGoalRecord(data.goals);
         return data;
     }
     /**
@@ -182,11 +193,12 @@ class GoalsService {
         // Build a compact context string from all matching goals
         return data
             .map((g) => {
-            let text = `Goal: ${g.title}`;
-            if (g.description) {
+            const row = GoalsService.normalizeGoalRecord(g);
+            let text = `Goal: ${row.title}`;
+            if (row.description) {
+                const parts = [];
                 try {
-                    const json = JSON.parse(g.description);
-                    const parts = [];
+                    const json = JSON.parse(row.description || "{}");
                     if (json.describe)
                         parts.push(json.describe);
                     if (json.priority1)
@@ -195,17 +207,39 @@ class GoalsService {
                         parts.push(`Priority 2: ${json.priority2}`);
                     if (json.priority3)
                         parts.push(`Priority 3: ${json.priority3}`);
-                    text += `. ${parts.join(". ")}`;
                 }
                 catch {
-                    text += `. ${g.description}`;
+                    // not JSON
                 }
+                if (parts.length)
+                    text += `. ${parts.join(". ")}`;
+                else
+                    text += `. ${row.description}`;
             }
-            if (g.category)
-                text += `. Category: ${g.category}`;
+            if (row.category)
+                text += `. Category: ${row.category}`;
             return text;
         })
             .join(" | ");
+    }
+    static normalizeGoalRecord(r) {
+        if (!r)
+            return r;
+        return {
+            id: r.id,
+            userId: r.user_id || r.userId,
+            title: r.title,
+            description: r.description,
+            category: r.category,
+            difficulty: r.difficulty,
+            targetDate: r.target_date || r.targetDate,
+            priority1: r.priority1 || null,
+            priority2: r.priority2 || null,
+            priority3: r.priority3 || null,
+            status: r.status,
+            useInSearch: r.use_in_search !== undefined ? r.use_in_search : r.useInSearch,
+            createdAt: r.created_at || r.createdAt,
+        };
     }
 }
 exports.GoalsService = GoalsService;

@@ -26,24 +26,28 @@ class SearchService {
         // Use ALL providers by default for maximum results diversity
         const providers = options?.providers || ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
         console.debug("[SearchService.search] user=", userId, "query=", query, "providers=", providers, "options=", options);
+        const page = options?.page && options.page > 0 ? options.page : 1;
         const visibleLimit = options?.limit || 70;
         const batchSize = search_cache_1.searchCache.getBatchSize();
         const fetchBatchSize = search_cache_1.searchCache.getFetchSize();
-        const topCount = Math.max(batchSize, visibleLimit);
-        const targetCacheSize = visibleLimit + batchSize; // keep one extra page available in cache
+        const startIndex = (page - 1) * visibleLimit;
+        const endIndex = page * visibleLimit;
+        const targetCacheSize = Math.min(fetchBatchSize, Math.max(endIndex, visibleLimit + batchSize));
+        if (options?.useCache === false) {
+            search_cache_1.searchCache.clear(query);
+        }
         const providerPromises = providers.map(async (source) => {
-            const cachedItems = search_cache_1.searchCache.getAll(query, source);
+            const cachedItems = options?.useCache === false ? [] : search_cache_1.searchCache.getAll(query, source);
             const cachedLength = cachedItems?.length ?? 0;
-            const cacheMaxSize = targetCacheSize;
-            if (cachedItems && cachedLength > cacheMaxSize) {
-                search_cache_1.searchCache.trim(query, cacheMaxSize, source);
+            if (cachedItems && cachedLength > targetCacheSize) {
+                search_cache_1.searchCache.trim(query, targetCacheSize, source);
             }
-            const needsFetch = (search_cache_1.searchCache.getAll(query, source)?.length ?? 0) < cacheMaxSize;
+            const needsFetch = cachedLength < targetCacheSize;
             if (needsFetch) {
-                const currentCached = search_cache_1.searchCache.getAll(query, source) ?? [];
+                const currentCached = cachedItems ?? [];
                 const additionalFetch = currentCached.length === 0
                     ? fetchBatchSize
-                    : Math.max(batchSize, cacheMaxSize - currentCached.length);
+                    : Math.max(batchSize, targetCacheSize - currentCached.length);
                 const providerResults = await providers_1.default.searchProvider(source, query, {
                     ...options,
                     providers: [source],
@@ -53,7 +57,7 @@ class SearchService {
                 const sortedResults = this.rankResults(combinedResults, query);
                 search_cache_1.searchCache.set(query, sortedResults, source);
             }
-            return search_cache_1.searchCache.getTop(query, topCount, source) || [];
+            return search_cache_1.searchCache.getAll(query, source) || [];
         });
         const sourceResultsArray = await Promise.all(providerPromises);
         const rawResults = sourceResultsArray.flat();
@@ -101,9 +105,14 @@ class SearchService {
             this.saveSearchHistory(userId, query, providers).catch((err) => console.error("Failed to save search history:", err.message));
             this.persistContent(ranked).catch((err) => console.error("Failed to persist content:", err.message));
         }
-        const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
+        const filtered = options?.excludeIds && options.excludeIds.length > 0
+            ? ranked.filter((item) => !options.excludeIds?.includes(item.id))
+            : ranked;
+        const sliced = options?.limit
+            ? filtered.slice(startIndex, endIndex)
+            : filtered.slice(startIndex, endIndex);
         if ((sliced || []).length === 0) {
-            console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
+            console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")} excludeIds=${options?.excludeIds?.length || 0}`);
         }
         return sliced;
     }

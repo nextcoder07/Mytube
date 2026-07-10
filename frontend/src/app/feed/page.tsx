@@ -22,10 +22,12 @@ export default function FeedPage() {
   const [selectedProviders, setSelectedProviders] = useState<string[]>(providerOptions.map((p) => p.id));
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshExcludedIds, setRefreshExcludedIds] = useState<string[]>([]);
 
   const watchHistoryIds = usePlayerStore((state) => state.watchHistory.map((entry) => entry.content.id));
   const goalHistoryIds = usePlayerStore((state) => state.goalHistory.map((entry) => entry.content.id));
-  const excludedIds = Array.from(new Set([...watchHistoryIds, ...goalHistoryIds]));
+  const baseExcludedIds = Array.from(new Set([...watchHistoryIds, ...goalHistoryIds]));
+  const excludedIds = Array.from(new Set([...baseExcludedIds, ...refreshExcludedIds]));
 
   const { goals, isLoading: goalsLoading } = useGoals();
   const activeGoals = goals.filter((goal) => goal.status === 'active');
@@ -110,7 +112,10 @@ export default function FeedPage() {
               );
             })}
             <button
-              onClick={() => setRefreshKey((prev) => prev + 1)}
+              onClick={() => {
+                setRefreshExcludedIds(items.map((item) => item.id));
+                setRefreshKey((prev) => prev + 1);
+              }}
               className="px-3 py-2 rounded-full text-xs font-semibold bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition"
             >
               Refresh feed
