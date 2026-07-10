@@ -1,5 +1,6 @@
 // frontend/src/hooks/useFeed.ts
 import { useInfiniteQuery } from '@tanstack/react-query';
+import type { InfiniteData } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { Content } from '../types/content';
 
@@ -22,9 +23,10 @@ export function useFeed(recommended = false, providerIds: string[] = [], exclude
     hasNextPage,
     isFetchingNextPage,
     refetch,
-  } = useInfiniteQuery<FeedResponsePayload | Content[]>({
+  } = useInfiniteQuery<FeedResponsePayload, Error, InfiniteData<FeedResponsePayload>, readonly unknown[], number>({
     queryKey: ['feed', endpoint, providerKey, excludedKey, limit],
-    queryFn: async ({ pageParam = 1 }) => {
+    queryFn: async (context) => {
+      const pageParam = (context.pageParam ?? 1) as number;
       const params: Record<string, string | number> = { page: pageParam, limit };
       if (!recommended && providerIds.length > 0) {
         params.providers = providerIds.join(',');
@@ -36,6 +38,7 @@ export function useFeed(recommended = false, providerIds: string[] = [], exclude
       const res = await api.get(endpoint, { params });
       return res.data?.data;
     },
+    initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       if (Array.isArray(lastPage)) return undefined;
       return lastPage.hasMore ? (lastPage.page || 1) + 1 : undefined;

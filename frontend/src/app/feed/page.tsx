@@ -19,7 +19,6 @@ const providerOptions = [
 ];
 
 export default function FeedPage() {
-  const [recommended, setRecommended] = useState(false);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(providerOptions.map((p) => p.id));
 
   const watchHistoryIds = usePlayerStore((state) => state.watchHistory.map((entry) => entry.content.id));
@@ -27,7 +26,7 @@ export default function FeedPage() {
   const excludedIds = Array.from(new Set([...watchHistoryIds, ...goalHistoryIds]));
 
   const { items, isLoading, error, loadMore, hasMore, isFetchingNextPage } = useFeed(
-    recommended,
+    false,
     selectedProviders,
     excludedIds,
     12
@@ -36,7 +35,7 @@ export default function FeedPage() {
 
   const hasGoals = goals.length > 0;
   const displayItems = items;
-  const title = recommended ? 'Recommended for You' : hasGoals ? 'Goal-based Feed' : 'Create a Goal First';
+  const title = hasGoals ? 'Goal Feed' : 'Create a Goal First';
 
   const toggleProvider = (providerId: string) => {
     setSelectedProviders((prev) =>
@@ -54,33 +53,12 @@ export default function FeedPage() {
     <main className="flex-1 p-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Feed</h1>
-          <p className="text-gray-400 mt-1">Content curated from your goals and recent activity.</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <button
-            id="feed-tab-all"
-            onClick={() => setRecommended(false)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              !recommended ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            All
-          </button>
-          <button
-            id="feed-tab-recommended"
-            onClick={() => setRecommended(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              recommended ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Recommended
-          </button>
+          <h1 className="text-2xl font-bold text-white">Goal Feed</h1>
+          <p className="text-gray-400 mt-1">Only content aligned to your active goals, learning priorities, and goal progress.</p>
         </div>
       </div>
 
-      {!recommended && (
-        <div className="rounded-3xl border border-gray-800 bg-gray-900/60 p-4">
+      <div className="rounded-3xl border border-gray-800 bg-gray-900/60 p-4">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Sources</span>
             <button
@@ -109,7 +87,6 @@ export default function FeedPage() {
             })}
           </div>
         </div>
-      )}
 
       {isLoading || goalsLoading ? (
         <div className="flex justify-center py-20"><LoadingSpinner /></div>

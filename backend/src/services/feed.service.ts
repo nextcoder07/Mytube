@@ -29,15 +29,22 @@ export class FeedService {
       const availableProviders = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
       const selectedProviders = providers && providers.length > 0 ? providers : availableProviders;
 
-      const goalTitles = activeGoals.map((goal) => goal.title).join(" | ");
-      const query = goalTitles;
+      const goalQueryParts = activeGoals.flatMap((goal) => {
+        const parts = [goal.title, goal.category, goal.description];
+        if (goal.priority1) parts.push(`Priority 1: ${goal.priority1}`);
+        if (goal.priority2) parts.push(`Priority 2: ${goal.priority2}`);
+        if (goal.priority3) parts.push(`Priority 3: ${goal.priority3}`);
+        return parts.filter(Boolean);
+      });
+
+      const query = goalQueryParts.join(' | ');
       const goalId = activeGoals[0].id;
 
       const searchOptions: SearchOptions = {
         limit: limit * 2,
         providers: selectedProviders,
         goalId,
-        aiContext: [goalContext, profileContextParts.join(". ")].filter(Boolean).join(". "),
+        aiContext: [goalContext, profileContextParts.join('. ')].filter(Boolean).join('. '),
         excludeIds,
       };
 
