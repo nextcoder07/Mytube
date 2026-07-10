@@ -14,8 +14,11 @@ export const getFeed = async (req: Request, res: Response, next: NextFunction) =
     const providers = req.query.providers
       ? (req.query.providers as string).split(",").map((provider) => provider.trim()).filter(Boolean)
       : undefined;
+    const excludeIds = req.query.excludeIds
+      ? (req.query.excludeIds as string).split(",").map((id) => id.trim()).filter(Boolean)
+      : undefined;
 
-    const feed = await FeedService.getFeed(user.uid, page, limit, providers);
+    const feed = await FeedService.getFeed(user.uid, page, limit, providers, excludeIds);
     res.status(200).json(success(feed, "Feed fetched successfully"));
   } catch (err: any) {
     next(err);
@@ -27,7 +30,11 @@ export const getRecommended = async (req: Request, res: Response, next: NextFunc
     const user = (req as any).user;
     if (!user) return next(new HttpError(401, "Unauthorized"));
 
-    const recommendations = await FeedService.getRecommended(user.uid);
+    const excludeIds = req.query.excludeIds
+      ? (req.query.excludeIds as string).split(",").map((id) => id.trim()).filter(Boolean)
+      : undefined;
+
+    const recommendations = await FeedService.getRecommended(user.uid, excludeIds);
     res.status(200).json(success(recommendations, "Recommendations fetched successfully"));
   } catch (err: any) {
     next(err);

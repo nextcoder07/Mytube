@@ -122,9 +122,13 @@ export class SearchService {
       );
     }
 
-    const sliced = options?.limit ? ranked.slice(0, options.limit) : ranked;
+    const filtered = options?.excludeIds && options.excludeIds.length > 0
+      ? ranked.filter((item) => !options.excludeIds?.includes(item.id))
+      : ranked;
+
+    const sliced = options?.limit ? filtered.slice(0, options.limit) : filtered;
     if ((sliced || []).length === 0) {
-      console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")}`);
+      console.warn(`[SearchService.search] No results after ranking for query="${query}" with providers=${providers.join(",")} excludeIds=${options?.excludeIds?.length || 0}`);
     }
     return sliced;
   }

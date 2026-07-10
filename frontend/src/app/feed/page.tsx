@@ -5,8 +5,8 @@ import Link from 'next/link';
 import ContentGrid from '../../components/content/ContentGrid';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useFeed } from '../../hooks/useFeed';
-import { useLocalGoalFeed } from '../../hooks/useLocalGoalFeed';
 import { useGoals } from '../../hooks/useGoals';
+import { usePlayerStore } from '../../store/player.store';
 
 const providerOptions = [
   { id: 'youtube', label: 'YouTube' },
@@ -22,17 +22,21 @@ export default function FeedPage() {
   const [recommended, setRecommended] = useState(false);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(providerOptions.map((p) => p.id));
 
+  const watchHistoryIds = usePlayerStore((state) => state.watchHistory.map((entry) => entry.content.id));
+  const goalHistoryIds = usePlayerStore((state) => state.goalHistory.map((entry) => entry.content.id));
+  const excludedIds = Array.from(new Set([...watchHistoryIds, ...goalHistoryIds]));
+
   const { items, isLoading, error, loadMore, hasMore, isFetchingNextPage } = useFeed(
     recommended,
     selectedProviders,
+    excludedIds,
     12
   );
-  const { items: localGoalItems } = useLocalGoalFeed();
   const { goals, isLoading: goalsLoading } = useGoals();
 
   const hasGoals = goals.length > 0;
-  const displayItems = recommended && localGoalItems.length > 0 ? localGoalItems : items;
-  const title = recommended ? 'Recommended for You' : hasGoals ? 'Goal-based Feed' : 'General Feed';
+  const displayItems = items;
+  const title = recommended ? 'Recommended for You' : hasGoals ? 'Goal-based Feed' : 'Create a Goal First';
 
   const toggleProvider = (providerId: string) => {
     setSelectedProviders((prev) =>
@@ -126,7 +130,7 @@ export default function FeedPage() {
             <div className="rounded-3xl border border-dashed border-gray-700 bg-gray-900/40 p-10 text-center">
               <p className="text-gray-400 text-sm max-w-xl mx-auto">
                 {hasGoals
-                  ? 'We could not find enough personalized content yet. Try generating a roadmap or exploring goals in the Goals page.'
+                  ? 'We could not find enough personalized content yet. Try refining your goals or waiting while we collect more relevant resources.'
                   : 'No goals defined yet. Create a goal in the Goals page and come back for a personalized feed.'}
               </p>
             </div>

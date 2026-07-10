@@ -22,6 +22,7 @@ export interface Content {
 
 export interface SearchOptions {
   providers?: string[];
+  excludeIds?: string[];
   type?: string;
   page?: number;
   limit?: number;

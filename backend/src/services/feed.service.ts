@@ -2,6 +2,7 @@
 import { supabase } from "../utils/supabase";
 import SearchService from "./search.service";
 import GoalsService from "./goals.service";
+import UserService from "./user.service";
 import { SearchOptions } from "../models/content.model";
 
 export class FeedService {
@@ -9,29 +10,35 @@ export class FeedService {
    * Get personalized feed. If user has active goals, return content matching those goals.
    * Otherwise, return a mixed feed of general tech topics.
    */
-  static async getFeed(userId: string, page = 1, limit = 10, providers?: string[]) {
+  static async getFeed(userId: string, page = 1, limit = 10, providers?: string[], excludeIds?: string[]) {
     try {
       // 1. Fetch active goals and context
       const goals = await GoalsService.getGoals(userId);
       const activeGoals = goals.filter((g) => g.status === "active");
-      const goalContext = await GoalsService.getActiveGoalContext(userId);
-
-      let query = "software development";
-      let goalId: string | undefined;
-      if (activeGoals.length > 0) {
-        query = activeGoals.map((goal) => goal.title).join(" | ");
-        goalId = activeGoals[0].id;
+      if (activeGoals.length === 0) {
+        return { content: [], page, hasMore: false };
       }
+
+      const goalContext = await GoalsService.getActiveGoalContext(userId);
+      const userProfile = await UserService.getProfile(userId).catch(() => null);
+      const profileContextParts: string[] = [];
+      if (userProfile?.profile?.learning_style) profileContextParts.push(`Learning style: ${userProfile.profile.learning_style}`);
+      if (userProfile?.profile?.bio) profileContextParts.push(`Bio: ${userProfile.profile.bio}`);
+      if (userProfile?.profile?.daily_goal_minutes) profileContextParts.push(`Daily learning goal: ${userProfile.profile.daily_goal_minutes} minutes`);
 
       const availableProviders = ["youtube", "github", "reddit", "medium", "website", "devto", "wikipedia"];
       const selectedProviders = providers && providers.length > 0 ? providers : availableProviders;
 
-      // 2. Perform search across providers with goal-aware ranking if possible
+      const goalTitles = activeGoals.map((goal) => goal.title).join(" | ");
+      const query = goalTitles;
+      const goalId = activeGoals[0].id;
+
       const searchOptions: SearchOptions = {
         limit: limit * 2,
         providers: selectedProviders,
         goalId,
-        aiContext: goalContext,
+        aiContext: [goalContext, profileContextParts.join(". ")].filter(Boolean).join(". "),
+        excludeIds,
       };
 
       const contentList = await SearchService.search(userId, query, searchOptions);
@@ -53,7 +60,7 @@ export class FeedService {
   /**
    * Fetch recommendations table for user.
    */
-  static async getRecommended(userId: string) {
+  static async getRecommended(userId: string, excludeIds?: string[]) {
     const { data, error } = await supabase
       .from("recommendations")
       .select("*, content(*)")
@@ -63,7 +70,7 @@ export class FeedService {
 
     if (error) throw error;
 
-    const recommendations = (data || []).filter((item: any) => item.content).map((item: any) => ({
+    let recommendations = (data || []).filter((item: any) => item.content).map((item: any) => ({
       ...item.content,
       metadata: {
         ...item.content.metadata,
@@ -72,11 +79,16 @@ export class FeedService {
       },
     }));
 
+    if (excludeIds && excludeIds.length > 0) {
+      const excludeSet = new Set(excludeIds);
+      recommendations = recommendations.filter((item) => !excludeSet.has(item.id));
+    }
+
     if (recommendations.length > 0) {
       return recommendations;
     }
 
-    const fallbackFeed = await this.getFeed(userId, 1, 10);
+    const fallbackFeed = await this.getFeed(userId, 1, 10, undefined, excludeIds);
     return fallbackFeed.content;
   }
 }

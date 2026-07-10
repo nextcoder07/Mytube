@@ -9,19 +9,10 @@ interface FeedResponsePayload {
   hasMore?: boolean;
 }
 
-function isRecommendationItem(item: unknown): item is { content: Content } {
-  return (
-    typeof item === 'object' &&
-    item !== null &&
-    'content' in item &&
-    typeof (item as { content?: unknown }).content === 'object' &&
-    (item as { content?: unknown }).content !== null
-  );
-}
-
-export function useFeed(recommended = false, providerIds: string[] = [], limit = 12) {
+export function useFeed(recommended = false, providerIds: string[] = [], excludeIds: string[] = [], limit = 12) {
   const endpoint = recommended ? '/feed/recommended' : '/feed';
   const providerKey = providerIds.slice().sort().join(',');
+  const excludedKey = excludeIds.slice().sort().join(',');
 
   const {
     data,
@@ -32,11 +23,14 @@ export function useFeed(recommended = false, providerIds: string[] = [], limit =
     isFetchingNextPage,
     refetch,
   } = useInfiniteQuery<FeedResponsePayload | Content[]>({
-    queryKey: ['feed', endpoint, providerKey, limit],
+    queryKey: ['feed', endpoint, providerKey, excludedKey, limit],
     queryFn: async ({ pageParam = 1 }) => {
       const params: Record<string, string | number> = { page: pageParam, limit };
       if (!recommended && providerIds.length > 0) {
         params.providers = providerIds.join(',');
+      }
+      if (excludeIds.length > 0) {
+        params.excludeIds = excludeIds.join(',');
       }
 
       const res = await api.get(endpoint, { params });

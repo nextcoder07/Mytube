@@ -225,7 +225,7 @@ export default function GoalsPage() {
                           setPriority2(goal.priority2 || "");
                           setPriority3(goal.priority3 || "");
                           setCategory(goal.category || "General");
-                          setDifficulty((goal.difficulty as any) || "beginner");
+                          setDifficulty(goal.difficulty || "beginner");
                           setTargetDate(goal.targetDate || "");
                           setFormError(null);
                           setFormSuccess(null);
