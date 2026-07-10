@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import axios from "axios";
+import auth from "./firebase";
 import { useAuthStore } from "../store/auth.store";
 import { API_BASE_URL } from "./config";
 
@@ -10,11 +11,21 @@ export const api = axios.create({
   },
 });
 
-// Automatically inject JWT / Firebase ID Token from Zustand auth store
+// Automatically inject a fresh Firebase ID token from the client.
+// If Firebase is available client-side, use the current authenticated user's token.
 api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token;
+  async (config) => {
+    let token = useAuthStore.getState().token;
+    if (typeof window !== "undefined" && auth.currentUser) {
+      try {
+        token = await auth.currentUser.getIdToken(true);
+        useAuthStore.getState().setToken(token);
+      } catch (err) {
+        console.warn("Failed to refresh Firebase token for API request:", err);
+      }
+    }
     if (token) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

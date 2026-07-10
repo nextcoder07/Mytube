@@ -53,6 +53,16 @@ class UserService {
             profileUpdates.learning_style = updates.learningStyle;
         if (updates.dailyGoalMinutes !== undefined)
             profileUpdates.daily_goal_minutes = updates.dailyGoalMinutes;
+        // Custom user API keys
+        const { userKeyRotationManager } = require("../utils/userKeyManager");
+        if (updates.user_youtube_api_keys !== undefined) {
+            profileUpdates.user_youtube_api_keys = updates.user_youtube_api_keys;
+            userKeyRotationManager.clearUserState("youtube", userId);
+        }
+        if (updates.user_github_api_keys !== undefined) {
+            profileUpdates.user_github_api_keys = updates.user_github_api_keys;
+            userKeyRotationManager.clearUserState("github", userId);
+        }
         if (Object.keys(profileUpdates).length > 0) {
             const { error } = await supabase_1.supabase
                 .from("profiles")

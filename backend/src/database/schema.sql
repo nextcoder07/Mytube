@@ -24,7 +24,9 @@ create table if not exists public.profiles (
   learning_style varchar(50) default 'mixed'::varchar, -- 'visual', 'reading', 'mixed'
   daily_goal_minutes integer default 30 not null,
   streak integer default 0 not null,
-  total_xp integer default 0 not null
+  total_xp integer default 0 not null,
+  user_youtube_api_keys text,
+  user_github_api_keys text
 );
 
 -- GOALS TABLE

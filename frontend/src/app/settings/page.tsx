@@ -14,8 +14,7 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/auth.store';
-import { API_BASE_URL } from '../../lib/config';
-import axios from 'axios';
+import api from '../../lib/api';
 
 /** Mask an API key for display, showing first 8 and last 4 chars */
 function maskKey(key: string): string {
@@ -91,9 +90,7 @@ export default function SettingsPage() {
       return;
     }
     try {
-      const res = await axios.get(`${API_BASE_URL}/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/user');
       const profile = res.data?.data?.profile;
       if (profile) {
         const initial: Record<string, string> = {};
@@ -121,11 +118,7 @@ export default function SettingsPage() {
     setSaveErrors((prev) => ({ ...prev, [config.id]: '' }));
 
     try {
-      await axios.put(
-        `${API_BASE_URL}/user`,
-        { [config.dbField]: keyValues[config.id] || '' },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.put('/user', { [config.dbField]: keyValues[config.id] || '' });
       setSaveStatus((prev) => ({ ...prev, [config.id]: 'saved' }));
       setTimeout(() => {
         setSaveStatus((prev) => ({ ...prev, [config.id]: 'idle' }));
@@ -293,11 +286,7 @@ export default function SettingsPage() {
                         if (!token) return;
                         setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'saving' }));
                         try {
-                          await axios.put(
-                            `${API_BASE_URL}/user`,
-                            { [cfg.dbField]: '' },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
+                          await api.put('/user', { [cfg.dbField]: '' });
                           setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'saved' }));
                           setTimeout(() => setSaveStatus((prev) => ({ ...prev, [cfg.id]: 'idle' })), 3000);
                         } catch (err: unknown) {

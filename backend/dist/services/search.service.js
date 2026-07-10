@@ -50,6 +50,7 @@ class SearchService {
                     : Math.max(batchSize, targetCacheSize - currentCached.length);
                 const providerResults = await providers_1.default.searchProvider(source, query, {
                     ...options,
+                    userId,
                     providers: [source],
                     limit: additionalFetch,
                 });
