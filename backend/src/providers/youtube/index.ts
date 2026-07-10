@@ -220,8 +220,9 @@ export class YouTubeProvider implements ContentProvider {
     const videoRenderers: any[] = [];
     const collect = (node: any) => {
       if (!node || typeof node !== "object") return;
-      if (node.videoRenderer) {
-        videoRenderers.push(node.videoRenderer);
+      const renderer = node.videoRenderer || node.gridVideoRenderer || node.compactVideoRenderer;
+      if (renderer) {
+        videoRenderers.push(renderer);
         return;
       }
       for (const value of Object.values(node)) {
@@ -484,119 +485,149 @@ export class YouTubeProvider implements ContentProvider {
     const results: Content[] = [];
 
     try {
-      const activeKey = keyManager.getKey();
-      if (!activeKey) {
-        console.warn("No YouTube API keys available for channel search");
-        return [];
-      }
-
-      // 1. Search for the channel by handle
-      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelHandle)}&maxResults=1&key=${activeKey}`;
-      const searchRes = await fetch(searchUrl);
-
-      if (!searchRes.ok) {
-        console.warn(`YouTube channel search failed: ${searchRes.status}`);
-        return [];
-      }
-
-      const searchData = await searchRes.json() as Record<string, unknown>;
-      const channelItems = (searchData.items || []) as Record<string, unknown>[];
-
-      if (channelItems.length === 0) {
-        console.warn(`YouTube channel not found: ${channelHandle}`);
-        return [];
-      }
-
-      const channelItem = channelItems[0];
-      const snippet = channelItem.snippet as Record<string, unknown>;
-      const channelId = (channelItem.id as Record<string, unknown>)?.channelId as string;
-
-      // 2. Add channel info as first result
-      results.push({
-        id: `youtube_channel_${channelId}`,
-        title: `${snippet.title} - YouTube Channel`,
-        url: `https://www.youtube.com/channel/${channelId}`,
-        source: "youtube",
-        type: "channel",
-        thumbnail: (snippet.thumbnails as Record<string, Record<string, string>> | undefined)?.high?.url,
-        description: snippet.description as string,
-        author: snippet.title as string,
-        tags: ["youtube", "channel", channelHandle],
-        language: "en",
-        metadata: {
-          channelId,
-          handle: channelHandle,
+      const channelUrl = this.buildChannelVideosUrl(query, channelHandle);
+      const res = await fetch(channelUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         },
-        createdAt: new Date(snippet.publishedAt as string),
+        signal: AbortSignal.timeout(10000),
       });
 
-      // 3. Fetch channel's latest videos
-      const videosUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(channelId)}&order=date&type=video&maxResults=${Math.min(limit - 1, 25)}&key=${activeKey}`;
-      const videosRes = await fetch(videosUrl);
+      if (!res.ok) {
+        console.warn(`YouTube channel page request failed: ${res.status}`);
+        return [];
+      }
 
-      if (videosRes.ok) {
-        const videosData = await videosRes.json() as Record<string, unknown>;
-        const videoItems = (videosData.items || []) as Record<string, unknown>[];
-        const videoIds = videoItems
-          .map(item => {
-            const id = item.id as Record<string, unknown>;
-            return id?.videoId as string;
-          })
-          .filter(Boolean);
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      let initialData: any = null;
+      let innerTubeConfig: any = null;
+      let apiKey: string | undefined;
 
-        // Fetch video details (duration, views)
-        if (videoIds.length > 0) {
-          const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds.join(",")}&key=${activeKey}`;
-          const detailsRes = await fetch(detailsUrl);
+      for (const script of $("script").toArray()) {
+        const scriptText = $(script).html() || "";
+        if (!scriptText) continue;
 
-          const detailsMap: Record<string, { duration: number; views: number }> = {};
-          if (detailsRes.ok) {
-            const detailsData = await detailsRes.json() as Record<string, unknown>;
-            const detailItems = (detailsData.items || []) as Record<string, unknown>[];
-            detailItems.forEach(item => {
-              const contentDetails = item.contentDetails as Record<string, unknown> | undefined;
-              const statistics = item.statistics as Record<string, unknown> | undefined;
-              detailsMap[item.id as string] = {
-                duration: this.parseISO8601Duration(contentDetails?.duration as string),
-                views: parseInt((statistics?.viewCount as string) || "0", 10),
-              };
-            });
+        if (!initialData) {
+          const match = scriptText.match(/ytInitialData\s*=\s*(\{.+?\})\s*;/s);
+          if (match) {
+            try {
+              initialData = JSON.parse(match[1]);
+            } catch {
+              /* ignore invalid JSON */
+            }
           }
-
-          // Add videos to results
-          videoItems.forEach(item => {
-            const itemSnippet = item.snippet as Record<string, unknown>;
-            const videoId = (item.id as Record<string, unknown>)?.videoId as string;
-            const details = detailsMap[videoId] || { duration: 0, views: 0 };
-
-            results.push({
-              id: `youtube_${videoId}`,
-              title: itemSnippet.title as string,
-              url: `https://www.youtube.com/watch?v=${videoId}`,
-              source: "youtube",
-              type: "video",
-              thumbnail: (itemSnippet.thumbnails as Record<string, Record<string, string>> | undefined)?.high?.url,
-              description: itemSnippet.description as string,
-              author: channelHandle,
-              duration: details.duration,
-              viewCount: details.views,
-              tags: ["youtube", "video", channelHandle],
-              language: "en",
-              metadata: {
-                channelId,
-                channel: channelHandle,
-              },
-              createdAt: new Date(itemSnippet.publishedAt as string),
-            });
-          });
         }
+
+        if (!innerTubeConfig) {
+          const configMatch = scriptText.match(/ytcfg\.set\((\{.+?\})\);/s);
+          if (configMatch) {
+            try {
+              innerTubeConfig = JSON.parse(configMatch[1]);
+            } catch {
+              /* ignore invalid JSON */
+            }
+          }
+        }
+
+        if (!apiKey && /INNERTUBE_API_KEY/.test(scriptText)) {
+          const keyMatch = scriptText.match(/"INNERTUBE_API_KEY"\s*:\s*"([^\"]+)"/);
+          if (keyMatch) {
+            apiKey = keyMatch[1];
+          }
+        }
+
+        if (initialData && innerTubeConfig && apiKey) break;
+      }
+
+      if (!initialData) {
+        throw new Error("Unable to parse channel page data from YouTube");
+      }
+
+      const headerData = this.extractChannelHeaderData(initialData);
+      if (headerData?.channelId) {
+        results.push({
+          id: `youtube_channel_${headerData.channelId}`,
+          title: `${headerData.title} - YouTube Channel`,
+          url: headerData.channelUrl,
+          source: "youtube",
+          type: "channel",
+          thumbnail: headerData.thumbnail,
+          description: headerData.description,
+          author: headerData.title,
+          tags: ["youtube", "channel", channelHandle],
+          language: "en",
+          metadata: {
+            channelId: headerData.channelId,
+            handle: channelHandle,
+            subscriberText: headerData.subscriberText,
+          },
+          createdAt: new Date(),
+        });
+      }
+
+      const videos = this.extractVideosFromSearchData(initialData);
+      results.push(...videos.slice(0, Math.max(limit - results.length, 0)));
+
+      let continuationToken = this.extractContinuationToken(initialData);
+      const context = innerTubeConfig?.INNERTUBE_CONTEXT;
+
+      while (results.length < limit && continuationToken && apiKey && context) {
+        const continuationItems = await this.fetchSearchContinuation(apiKey, context, continuationToken);
+        if (!continuationItems) break;
+
+        const pageVideos = this.extractVideosFromSearchData(continuationItems);
+        results.push(...pageVideos);
+        results.splice(limit);
+        continuationToken = this.extractContinuationToken(continuationItems);
       }
 
       return results.slice(0, limit);
-    } catch (err: any) {
-      console.error("YouTube channel search error:", err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[YouTube] Channel scrape error:", message);
       return [];
     }
+  }
+
+  private buildChannelVideosUrl(query: string, channelHandle: string): string {
+    const lower = query.toLowerCase();
+    if (/youtube\.com\/channel\//.test(lower)) {
+      return query.includes("/videos") ? query : `${query.replace(/\/+$/, "")}/videos`;
+    }
+    if (/youtube\.com\/@/.test(lower)) {
+      return query.includes("/videos") ? query : `${query.replace(/\/+$/, "")}/videos`;
+    }
+    return `https://www.youtube.com/@${channelHandle}/videos`;
+  }
+
+  private extractChannelHeaderData(data: any) {
+    let header: any = null;
+    const collect = (node: any) => {
+      if (!node || typeof node !== "object") return;
+      if (node.c4TabbedHeaderRenderer || node.channelMetadataRenderer || node.header?.c4TabbedHeaderRenderer) {
+        header = node.c4TabbedHeaderRenderer || node.channelMetadataRenderer || node.header?.c4TabbedHeaderRenderer;
+        return;
+      }
+      for (const value of Object.values(node)) {
+        collect(value);
+      }
+    };
+    collect(data);
+
+    if (!header) return null;
+
+    const title = this.renderText(header.title || header.channelTitle) || channelHandle;
+    const thumbnails = header?.avatar?.thumbnails || header?.thumbnail?.thumbnails || [];
+    const thumbnail = thumbnails.slice(-1)[0]?.url;
+    const channelId = header?.channelId || header?.externalId || header?.ownerProfileUrl?.replace?.("/channel/", "") || undefined;
+    const channelUrl = channelId ? `https://www.youtube.com/channel/${channelId}` : `https://www.youtube.com/@${channelHandle}`;
+    const description = this.renderText(header.description) || undefined;
+    const subscriberText = this.renderText(header.subscriberCountText) || undefined;
+
+    return { title, thumbnail, channelId, channelUrl, description, subscriberText };
   }
 }
 
