@@ -1,10 +1,40 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.YouTubeProvider = void 0;
-const cheerio_1 = __importDefault(require("cheerio"));
+const cheerio = __importStar(require("cheerio"));
 const supabase_1 = require("../../config/supabase");
 const userKeyManager_1 = require("../../utils/userKeyManager");
 /**
@@ -20,7 +50,7 @@ class YouTubeKeyManager {
         this.loadKeys();
     }
     loadKeys() {
-        const rawMultiKeys = process.env.YOUTUBE_API_KEYS;
+        const rawMultiKeys = process.env.MYTUBE_YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEYS;
         if (rawMultiKeys) {
             const cleaned = rawMultiKeys
                 .trim()
@@ -34,7 +64,7 @@ class YouTubeKeyManager {
         }
         // Fallback to single YOUTUBE_API_KEY
         if (this.keys.length === 0) {
-            const singleKey = process.env.YOUTUBE_API_KEY?.trim().replace(/^['"]|['"]$/g, "");
+            const singleKey = (process.env.MYTUBE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY)?.trim().replace(/^['"]|['"]$/g, "");
             if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-")) {
                 this.keys = [singleKey];
             }
@@ -45,6 +75,9 @@ class YouTubeKeyManager {
     }
     hasKeys() {
         return this.keys.length > 0;
+    }
+    getKeys() {
+        return this.keys;
     }
     /**
      * Returns true when every configured key is currently marked exhausted.
@@ -107,7 +140,9 @@ class YouTubeProvider {
     }
     async search(query, options) {
         this.quotaExhausted = false;
-        const limit = Math.max(options?.limit || 70, 70);
+        // Respect the requested limit from callers (feed can request small limits).
+        // Default to 70 when not provided to preserve previous behavior for standalone searches.
+        const limit = options?.limit || 70;
         // 1. Resolve custom user YouTube keys and fallback env keys
         let userYoutubeKeysString = "";
         if (options?.userId && options.userId !== "anonymous") {
@@ -125,26 +160,10 @@ class YouTubeProvider {
                 console.error("[YouTubeProvider] Failed to fetch user YouTube API keys:", err.message);
             }
         }
-        // Load backend/env fallback keys
-        const envKeys = [];
-        const rawMultiKeys = process.env.YOUTUBE_API_KEYS;
-        if (rawMultiKeys) {
-            const cleaned = rawMultiKeys
-                .trim()
-                .replace(/^['"]|['"]$/g, "")
-                .split(/[,;\n\r]+/)
-                .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
-                .filter((k) => k.length > 0 && !k.includes("your-"));
-            envKeys.push(...cleaned);
-        }
-        const singleKey = process.env.YOUTUBE_API_KEY?.trim().replace(/^['"]|['"]$/g, "");
-        if (singleKey && singleKey !== "AIzaSy..." && !singleKey.includes("your-") && !envKeys.includes(singleKey)) {
-            envKeys.push(singleKey);
-        }
         const userId = options?.userId || "anonymous";
-        // 2. Perform API search if keys are available
-        const hasKeysAvailable = !!userYoutubeKeysString || envKeys.length > 0;
-        if (hasKeysAvailable) {
+        const envKeys = keyManager.getKeys();
+        // Try API search if user keys or environment keys are available
+        if (userYoutubeKeysString || envKeys.length > 0) {
             try {
                 const results = await this.searchViaYouTubeAPI(query, limit, userId, userYoutubeKeysString, envKeys);
                 if (results && results.length > 0) {
@@ -279,7 +298,7 @@ class YouTubeProvider {
                 throw new Error(`YouTube HTML search returned ${res.status}`);
             }
             const html = await res.text();
-            const $ = cheerio_1.default.load(html);
+            const $ = cheerio.load(html);
             const scripts = $("script").toArray();
             let initialData = null;
             let innerTubeConfig = null;
@@ -615,7 +634,7 @@ class YouTubeProvider {
                 return [];
             }
             const html = await res.text();
-            const $ = cheerio_1.default.load(html);
+            const $ = cheerio.load(html);
             let initialData = null;
             let innerTubeConfig = null;
             let apiKey;

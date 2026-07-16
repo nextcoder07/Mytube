@@ -20,10 +20,10 @@ class UserKeyRotationManager {
     customKeysString: string | undefined | null,
     envKeys: string[] = []
   ): string | null {
-    let keys: string[] = [];
+    let userKeys: string[] = [];
 
     if (customKeysString) {
-      keys = customKeysString
+      userKeys = customKeysString
         .trim()
         .replace(/^['"]|['"]$/g, "")
         .split(/[,;\n\r]+/)
@@ -31,12 +31,10 @@ class UserKeyRotationManager {
         .filter((k) => k.length > 0);
     }
 
-    // Fallback to environment keys if user keys not set
-    if (keys.length === 0) {
-      keys = envKeys;
-    }
+    // Combine user keys and env keys, but keep track of them
+    const allKeys = [...userKeys, ...envKeys];
 
-    if (keys.length === 0) {
+    if (allKeys.length === 0) {
       return null;
     }
 
@@ -47,9 +45,9 @@ class UserKeyRotationManager {
 
     let state = userStates.get(userId);
     // If the keys list changed or no state exists, initialize/reset
-    if (!state || JSON.stringify(state.keys) !== JSON.stringify(keys)) {
+    if (!state || JSON.stringify(state.keys) !== JSON.stringify(allKeys)) {
       state = {
-        keys,
+        keys: allKeys,
         currentIndex: 0,
         exhaustedUntil: new Map()
       };
@@ -57,14 +55,36 @@ class UserKeyRotationManager {
     }
 
     const now = Date.now();
-    // Loop through keys starting from currentIndex to find a non-exhausted key
-    for (let i = 0; i < state.keys.length; i++) {
-      const idx = (state.currentIndex + i) % state.keys.length;
-      const key = state.keys[idx];
-      const exhaustedTime = state.exhaustedUntil.get(key) || 0;
-      if (now >= exhaustedTime) {
-        state.currentIndex = idx;
-        return key;
+    
+    // We prioritize userKeys, so we search through them first
+    if (userKeys.length > 0) {
+      // Find the first available user key
+      const userIdx = state.currentIndex % userKeys.length;
+      for (let i = 0; i < userKeys.length; i++) {
+        const idx = (userIdx + i) % userKeys.length;
+        const key = userKeys[idx];
+        const exhaustedTime = state.exhaustedUntil.get(key) || 0;
+        if (now >= exhaustedTime) {
+          state.currentIndex = idx;
+          return key;
+        }
+      }
+    }
+
+    // If no user key is available (either none set or all exhausted), check envKeys
+    if (envKeys.length > 0) {
+      // Find the first available env key
+      const envIdx = state.currentIndex >= userKeys.length 
+        ? (state.currentIndex - userKeys.length) % envKeys.length 
+        : 0;
+      for (let i = 0; i < envKeys.length; i++) {
+        const idx = (envIdx + i) % envKeys.length;
+        const key = envKeys[idx];
+        const exhaustedTime = state.exhaustedUntil.get(key) || 0;
+        if (now >= exhaustedTime) {
+          state.currentIndex = userKeys.length + idx;
+          return key;
+        }
       }
     }
 

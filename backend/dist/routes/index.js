@@ -17,8 +17,13 @@ const ai_routes_1 = __importDefault(require("./ai.routes"));
 const analytics_routes_1 = __importDefault(require("./analytics.routes"));
 const status_routes_1 = __importDefault(require("./status.routes"));
 const debug_routes_1 = __importDefault(require("./debug.routes"));
+const config_1 = __importDefault(require("../config"));
 const router = (0, express_1.Router)();
 router.use("/auth", auth_routes_1.default);
+// Mount debug routes only in development
+if (config_1.default.nodeEnv === "development") {
+    router.use("/debug", debug_routes_1.default);
+}
 router.use("/user", user_routes_1.default);
 router.use("/goals", goals_routes_1.default);
 router.use("/search", search_routes_1.default);
@@ -29,10 +34,5 @@ router.use("/summary", summary_routes_1.default);
 router.use("/ai", ai_routes_1.default);
 router.use("/analytics", analytics_routes_1.default);
 router.use('/status', status_routes_1.default);
-// Mount debug routes only in development
-const config_1 = __importDefault(require("../config"));
-if (config_1.default.nodeEnv === "development") {
-    router.use("/debug", debug_routes_1.default);
-}
 exports.default = router;
 //# sourceMappingURL=index.js.map

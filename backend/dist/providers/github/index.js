@@ -24,22 +24,8 @@ class GitHubProvider {
                 console.error("[GitHubProvider] Failed to fetch user GitHub API keys:", err.message);
             }
         }
-        // Load backend/env fallback token(s) — supports comma-separated GITHUB_TOKENS or single GITHUB_TOKEN
+        // Only use per-user GitHub tokens. Do NOT use backend environment tokens.
         const envKeys = [];
-        const rawMultiTokens = process.env.GITHUB_TOKENS;
-        if (rawMultiTokens) {
-            const cleaned = rawMultiTokens
-                .trim()
-                .replace(/^['"]|['"]$/g, "")
-                .split(/[,;\n\r]+/)
-                .map((k) => k.trim().replace(/^['"]|['"]$/g, ""))
-                .filter((k) => k.length > 0 && !k.includes("your-") && k !== "ghp_...");
-            envKeys.push(...cleaned);
-        }
-        const singleToken = process.env.GITHUB_TOKEN?.trim().replace(/^['"]|['"]$/g, "");
-        if (singleToken && singleToken !== "ghp_..." && !singleToken.includes("your-") && !envKeys.includes(singleToken)) {
-            envKeys.push(singleToken);
-        }
         const userId = options?.userId || "anonymous";
         // 2. Build headers using rotated key
         const headers = this.buildHeaders(userId, userGithubKeysString, envKeys);
@@ -65,7 +51,8 @@ class GitHubProvider {
             Accept: "application/vnd.github.v3+json",
             "User-Agent": "MyTube-Personalized-Learning",
         };
-        const token = userKeyManager_1.userKeyRotationManager.getKey("github", userId, userKeysString, envKeys);
+        // Use only per-user GitHub tokens (no server env tokens)
+        const token = userKeyManager_1.userKeyRotationManager.getKey("github", userId, userKeysString, []);
         if (token) {
             headers["Authorization"] = `token ${token}`;
             // Stash the active token in a custom header for downstream rate-limit handling
@@ -80,7 +67,7 @@ class GitHubProvider {
         console.warn(`[GitHubProvider] Token ${activeToken.substring(0, 8)}... hit rate limit. Rotating...`);
         userKeyManager_1.userKeyRotationManager.markExhausted("github", userId, activeToken);
         // Check if another key is available
-        const nextToken = userKeyManager_1.userKeyRotationManager.getKey("github", userId, userKeysString, envKeys);
+        const nextToken = userKeyManager_1.userKeyRotationManager.getKey("github", userId, userKeysString, []);
         if (!nextToken) {
             console.warn("[GitHubProvider] All GitHub tokens exhausted. Proceeding unauthenticated.");
             return {

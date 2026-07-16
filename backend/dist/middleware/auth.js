@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authenticate = void 0;
+exports.requireAuth = exports.authenticate = void 0;
 const firebase_1 = require("../config/firebase");
 const errors_1 = require("../utils/errors");
 const config_1 = __importDefault(require("../config"));
@@ -46,4 +46,6 @@ const authenticate = async (req, res, next) => {
     }
 };
 exports.authenticate = authenticate;
+// Backwards-compatible alias used by some routes
+exports.requireAuth = exports.authenticate;
 //# sourceMappingURL=auth.js.map

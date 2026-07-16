@@ -1,7 +1,7 @@
 // src/providers/youtube/index.ts
 import { ContentProvider } from "../base.provider";
 import { Content, SearchOptions } from "../../models/content.model";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import { supabase } from "../../config/supabase";
 import { userKeyRotationManager } from "../../utils/userKeyManager";
 
@@ -49,6 +49,10 @@ class YouTubeKeyManager {
 
   hasKeys(): boolean {
     return this.keys.length > 0;
+  }
+
+  getKeys(): string[] {
+    return this.keys;
   }
 
   /**
@@ -139,17 +143,17 @@ export class YouTubeProvider implements ContentProvider {
     }
 
     const userId = options?.userId || "anonymous";
+    const envKeys = keyManager.getKeys();
 
-    // Only use per-user API keys. Do NOT fall back to server env keys.
-    const hasUserKeys = !!userYoutubeKeysString;
-    if (hasUserKeys) {
+    // Try API search if user keys or environment keys are available
+    if (userYoutubeKeysString || envKeys.length > 0) {
       try {
-        const results = await this.searchViaYouTubeAPI(query, limit, userId, userYoutubeKeysString, []);
+        const results = await this.searchViaYouTubeAPI(query, limit, userId, userYoutubeKeysString, envKeys);
         if (results && results.length > 0) {
           return results;
         }
       } catch (apiErr: any) {
-        console.warn(`[YouTubeProvider] API search failed with user keys, falling back to scraping:`, apiErr.message);
+        console.warn(`[YouTubeProvider] API search failed, falling back to scraping:`, apiErr.message);
       }
     }
 
@@ -170,8 +174,7 @@ export class YouTubeProvider implements ContentProvider {
     userKeysString: string,
     envKeys: string[]
   ): Promise<Content[]> {
-    // Use only user-provided keys (envKeys intentionally empty)
-    const apiKey = userKeyRotationManager.getKey("youtube", userId, userKeysString, []);
+    const apiKey = userKeyRotationManager.getKey("youtube", userId, userKeysString, envKeys);
     if (!apiKey) {
       this.quotaExhausted = true;
       throw new Error("No active YouTube API keys available (all exhausted or empty)");
