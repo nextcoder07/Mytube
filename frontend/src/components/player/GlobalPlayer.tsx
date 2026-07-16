@@ -295,7 +295,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchBefore.map((item) => (
-                        <div key={`before-${item.id}`} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`before-${item.id}`} className="w-80 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
@@ -316,7 +316,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchAfter.map((item) => (
-                        <div key={`after-${item.id}`} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`after-${item.id}`} className="w-80 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
