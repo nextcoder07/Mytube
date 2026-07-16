@@ -140,11 +140,11 @@ export default function GlobalPlayer() {
 
         {/* PIP Header */}
         {isMinimized && (
-          <div className="flex items-center justify-between p-2 bg-gray-900 border-b border-gray-800">
+          <div className="flex items-center justify-between p-2 bg-gray-900 border-b border-gray-800 relative z-20">
             <p className="text-xs font-semibold text-gray-300 truncate pr-2">
               {activeContent.title}
             </p>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-shrink-0">
               <button onClick={maximize} className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors">
                 <ArrowsPointingOutIcon className="w-4 h-4" />
               </button>
@@ -156,7 +156,7 @@ export default function GlobalPlayer() {
         )}
 
         {/* Main Media Player Area */}
-        <div className={isMinimized ? "aspect-video bg-black flex items-center justify-center relative" : "w-full bg-black aspect-video xl:max-h-[70vh] flex items-center justify-center relative shadow-xl"}>
+        <div className={isMinimized ? "aspect-video bg-black flex items-center justify-center relative overflow-hidden" : "w-full bg-black aspect-video xl:max-h-[70vh] flex items-center justify-center relative shadow-xl overflow-hidden"}>
           {/* Controls Overlay */}
           {!isMinimized && (
             <div className="absolute top-4 right-4 flex gap-2 z-10">
@@ -171,14 +171,20 @@ export default function GlobalPlayer() {
 
           {/* Player Embed */}
           {isYouTube && videoId ? (
-            <iframe
-              className="w-full h-full"
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+            <>
+              <iframe
+                className="w-full h-full"
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+              {/* Shield: blocks YouTube's native top-right UI from bleeding into PIP header */}
+              {isMinimized && (
+                <div className="absolute top-0 right-0 w-16 h-8 z-10 pointer-events-none bg-transparent" />
+              )}
+            </>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-950 text-white select-none">
               <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-5 shadow-2xl relative overflow-hidden">
@@ -289,7 +295,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchBefore.map((item) => (
-                        <div key={`before-${item.id}`} className="w-20 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`before-${item.id}`} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
@@ -310,7 +316,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchAfter.map((item) => (
-                        <div key={`after-${item.id}`} className="w-20 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`after-${item.id}`} className="w-40 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
