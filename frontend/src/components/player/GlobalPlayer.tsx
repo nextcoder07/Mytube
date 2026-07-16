@@ -136,7 +136,7 @@ export default function GlobalPlayer() {
     <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200"}>
 
       {/* Left/Main Section for Maximized OR PIP wrapper for Minimized */}
-      <div className={isMinimized ? "w-full flex flex-col" : "flex-1 flex flex-col xl:overflow-y-auto"}>
+      <div className={isMinimized ? "w-full flex flex-col" : "w-full xl:flex-1 flex flex-col xl:overflow-y-auto"}>
 
         {/* PIP Header */}
         {isMinimized && (
@@ -295,7 +295,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchBefore.map((item) => (
-                        <div key={`before-${item.id}`} className="w-80 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`before-${item.id}`} className="w-[320px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
@@ -316,7 +316,7 @@ export default function GlobalPlayer() {
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
                     <div className="flex gap-3 overflow-x-auto py-2">
                       {watchAfter.map((item) => (
-                        <div key={`after-${item.id}`} className="w-80 flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
+                        <div key={`after-${item.id}`} className="w-[320px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
@@ -341,8 +341,8 @@ export default function GlobalPlayer() {
                   </div>
                     <div className="mt-3 grid grid-cols-1 gap-4">
                     {relatedList.map((item) => (
-                        <div key={`rel-${item.id}`} className="flex gap-4 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
-                        <div className="w-[336px] aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+                        <div key={`rel-${item.id}`} className="flex flex-col sm:flex-row gap-4 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
+                        <div className="w-full sm:w-[336px] aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
                           {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                         </div>
                         <div className="flex-1">
@@ -366,7 +366,7 @@ export default function GlobalPlayer() {
 
       {/* Right Section: Suggestions / Queue */}
       {!isMinimized && (
-        <div className="w-full xl:w-[360px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden">
+        <div className="w-full xl:w-[420px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden">
           <div className="p-4 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">
@@ -385,9 +385,9 @@ export default function GlobalPlayer() {
               <div
                 key={item.id}
                 onClick={() => play(item)}
-                className="min-w-[260px] xl:min-w-0 flex flex-col xl:flex-row gap-3 group cursor-pointer"
+                className="min-w-[260px] xl:min-w-0 flex flex-col gap-3 group cursor-pointer"
               >
-                <div className="relative w-full xl:w-40 aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
                   {item.thumbnail ? (
                     <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   ) : (
