@@ -4,11 +4,32 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { usePlayerStore } from '@/store/player.store';
-import { useSearchStore } from '@/store/search.store';
 import { api } from '@/lib/api';
 import ContentCard from '@/components/content/ContentCard';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { ClockIcon, CalendarIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import type { Content } from '@/types/content';
+
+interface WatchHistoryEntry {
+  id: string;
+  userId: string;
+  contentId: string;
+  watchedAt: string;
+  goalId?: string;
+  content: Content;
+}
+
+interface SearchHistoryEntry {
+  id: string;
+  userId: string;
+  query: string;
+  providers?: string | string[];
+  resultsCount?: number;
+  createdAt?: string;
+  created_at?: string;
+  goalId?: string;
+  goal_id?: string;
+}
 
 function formatProviders(providers?: string) {
   if (!providers) return 'All providers';
@@ -25,7 +46,7 @@ export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState<'watch' | 'goal' | 'search'>('watch');
 
   // Fetch watch history from DB
-  const { data: watchHistory = [], isLoading: watchHistoryLoading } = useQuery({
+  const { data: watchHistory = [], isLoading: watchHistoryLoading } = useQuery<WatchHistoryEntry[]>({
     queryKey: ['watchHistory'],
     queryFn: async () => {
       const res = await api.get('/history');
@@ -34,7 +55,7 @@ export default function HistoryPage() {
   });
 
   // Fetch search history from DB
-  const { data: rawSearchHistory = [], isLoading: searchHistoryLoading } = useQuery({
+  const { data: rawSearchHistory = [], isLoading: searchHistoryLoading } = useQuery<SearchHistoryEntry[]>({
     queryKey: ['searchHistory'],
     queryFn: async () => {
       const res = await api.get('/search/history');
@@ -44,16 +65,16 @@ export default function HistoryPage() {
 
   // Filter goal watch history
   const goalHistory = useMemo(() => {
-    return watchHistory.filter((item: any) => item.goalId);
+    return watchHistory.filter((item) => item.goalId);
   }, [watchHistory]);
 
   const activeGoalCount = useMemo(() => {
-    return new Set(goalHistory.map((item: any) => item.goalId).filter(Boolean)).size;
+    return new Set(goalHistory.map((item) => item.goalId).filter(Boolean)).size;
   }, [goalHistory]);
 
   const searchStats = useMemo(() => {
     const providers: Record<string, number> = {};
-    rawSearchHistory.forEach((item: any) => {
+    rawSearchHistory.forEach((item) => {
       if (!item.providers) return;
       const list = Array.isArray(item.providers)
         ? item.providers
@@ -198,12 +219,12 @@ export default function HistoryPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {watchHistory.map((entry: any) => (
+                  {watchHistory.map((entry) => (
                     <div key={entry.id} className="flex flex-col h-full bg-gray-950/40 rounded-3xl overflow-hidden border border-gray-800 p-2 group hover:border-violet-500/50 transition">
                       <div className="relative aspect-video rounded-2xl overflow-hidden">
                         <ContentCard
                           content={entry.content}
-                          onClick={(c) => play(c, watchHistory.map((item: any) => item.content))}
+                          onClick={(c) => play(c, watchHistory.map((item) => item.content))}
                         />
                       </div>
                       <div className="p-3 flex-1 flex flex-col justify-between">
@@ -236,12 +257,12 @@ export default function HistoryPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {goalHistory.map((entry: any) => (
+                  {goalHistory.map((entry) => (
                     <div key={entry.id} className="flex flex-col h-full bg-gray-950/40 rounded-3xl overflow-hidden border border-gray-800 p-2 group hover:border-violet-500/50 transition">
                       <div className="relative aspect-video rounded-2xl overflow-hidden">
                         <ContentCard
                           content={entry.content}
-                          onClick={(c) => play(c, goalHistory.map((item: any) => item.content))}
+                          onClick={(c) => play(c, goalHistory.map((item) => item.content))}
                         />
                       </div>
                       <div className="p-3 flex-1 flex flex-col justify-between">
@@ -271,7 +292,7 @@ export default function HistoryPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {rawSearchHistory.map((item: any) => {
+                  {rawSearchHistory.map((item) => {
                     const providersText = Array.isArray(item.providers)
                       ? item.providers.join(', ')
                       : String(item.providers);
@@ -293,14 +314,19 @@ export default function HistoryPage() {
                             </span>
                           )}
                         </div>
-                        <div className="mt-4 pt-3 border-t border-gray-900 flex justify-between items-center text-xs text-gray-500">
-                          <span>
-                            Searched on {new Date(item.created_at || item.createdAt).toLocaleDateString()}
-                          </span>
-                          <span>
-                            {new Date(item.created_at || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
+                        {(() => {
+                          const dateObj = new Date(item.created_at || item.createdAt || Date.now());
+                          return (
+                            <div className="mt-4 pt-3 border-t border-gray-900 flex justify-between items-center text-xs text-gray-500">
+                              <span>
+                                Searched on {dateObj.toLocaleDateString()}
+                              </span>
+                              <span>
+                                {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}

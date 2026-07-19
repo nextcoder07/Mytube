@@ -1,87 +1,109 @@
-"use client";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import React from 'react';
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import BackendStatus from '@/components/common/BackendStatus';
+
+export const metadata: Metadata = {
+  title: 'MyTube – Personalized Learning Platform',
+  description: 'Boost your skill acquisition and track goals using MyTube, the ultimate personalized feed and watch history platform for curated educational resources.',
+  keywords: ['learning', 'personalized learning', 'educational curation', 'watch history', 'goals tracking', 'AI feed'],
+};
 
 export default function Home() {
-  const [backendStatus, setBackendStatus] = useState<string>("Checking backend connection...");
-
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "ok") {
-          setBackendStatus("✅ Backend is connected successfully!");
-        } else {
-          setBackendStatus("⚠️ Backend connected, but returned unexpected status.");
-        }
-      })
-      .catch(() => {
-        setBackendStatus("❌ Failed to connect to the backend.");
-      });
-  }, []);
+  // Structured Data (JSON-LD) for SEO
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    'name': 'MyTube',
+    'applicationCategory': 'EducationalApplication',
+    'operatingSystem': 'Web',
+    'description': 'AI‑powered personalized learning platform that curates articles, courses, repositories, and videos to fit your educational goals.',
+    'offers': {
+      '@type': 'Offer',
+      'price': '0',
+      'priceCurrency': 'USD',
+    },
+  };
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="mt-8 w-full p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-center">
-          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{backendStatus}</p>
+    <section className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-12 md:py-20 lg:py-28 font-sans">
+      {/* Inject JSON-LD Schema for Google Search bots */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      <header className="text-center max-w-3xl space-y-6 flex flex-col items-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold text-violet-400 bg-violet-950/40 border border-violet-500/20 rounded-full animate-pulse">
+          <span>✨ Optimize Your Learning Journey</span>
         </div>
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left mt-8">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row mt-8">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight text-white bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-indigo-200 to-pink-400">
+          Transform Content Into Knowledge
+        </h1>
+
+        <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          MyTube curates educational videos, documentation, articles, and GitHub repositories tailored to your personal goals. Complete tasks, build streaks, and track watch history.
+        </p>
+
+        {/* Call to Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-8 justify-center w-full max-w-md">
+          <Link
+            href="/feed"
+            className="btn-neon flex items-center justify-center h-12 px-8 text-sm font-semibold rounded-full shadow-lg shadow-violet-500/20 hover:shadow-pink-500/30 transition-all text-white"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Explore Learning Feed
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center h-12 px-8 text-sm font-semibold text-gray-300 bg-gray-900 border border-gray-800 hover:border-gray-700 hover:text-white rounded-full transition-all"
           >
-            Documentation
-          </a>
+            Go to Dashboard
+          </Link>
         </div>
-      </main>
-    </div>
+
+        {/* Backend Connectivity Check */}
+        <BackendStatus />
+      </header>
+
+      {/* Feature Highlights Section */}
+      <article className="mt-20 md:mt-28 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl w-full">
+        <section className="glow-card p-6 flex flex-col justify-between">
+          <div>
+            <div className="h-10 w-10 rounded-lg bg-violet-600/10 flex items-center justify-center border border-violet-500/20 mb-4 text-violet-400 font-bold text-lg">
+              🎯
+            </div>
+            <h2 className="text-lg font-bold text-white mb-2">Dynamic Learning Goals</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Create structured goals and track your progress. The system recommends topics matching your chosen milestones.
+            </p>
+          </div>
+        </section>
+
+        <section className="glow-card p-6 flex flex-col justify-between">
+          <div>
+            <div className="h-10 w-10 rounded-lg bg-pink-600/10 flex items-center justify-center border border-pink-500/20 mb-4 text-pink-400 font-bold text-lg">
+              ⚡
+            </div>
+            <h2 className="text-lg font-bold text-white mb-2">Curated Smart Feed</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Aggregate Reddit discussions, Youtube educational tutorials, GitHub repositories, and Dev.to posts in one single place.
+            </p>
+          </div>
+        </section>
+
+        <section className="glow-card p-6 flex flex-col justify-between">
+          <div>
+            <div className="h-10 w-10 rounded-lg bg-indigo-600/10 flex items-center justify-center border border-indigo-500/20 mb-4 text-indigo-400 font-bold text-lg">
+              📺
+            </div>
+            <h2 className="text-lg font-bold text-white mb-2">Smart Watch History</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Track what you watched and read across your profile. Watched items persist for an hour before being filtered from your feed.
+            </p>
+          </div>
+        </section>
+      </article>
+    </section>
   );
 }

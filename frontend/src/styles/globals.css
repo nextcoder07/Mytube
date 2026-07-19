@@ -24,7 +24,7 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-sans), 'Inter', system-ui, sans-serif;
   background-color: #09090e;
   color: #f3f4f6;
   overflow-x: hidden;
@@ -87,4 +87,19 @@ body {
 /* Text glow */
 .text-glow {
   text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+/* Core Web Vitals Render Performance Optimization */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 350px; /* Guessing average ContentCard height range */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

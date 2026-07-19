@@ -21,11 +21,12 @@ export default function ContentGrid({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {items.map((item) => (
-        <div key={item.id} className="h-full">
+      {items.map((item, index) => (
+        <div key={item.id} className="h-full content-visibility-auto">
           <ContentCard
             content={item}
             onClick={(c) => play(c, items)}
+            priority={index < 4}
           />
         </div>
       ))}

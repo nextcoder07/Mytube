@@ -1,6 +1,6 @@
 // src/components/content/ContentCard.tsx
-/* eslint-disable @next/next/no-img-element */
 import React from "react";
+import Image from "next/image";
 import { Content } from "../../types/content";
 import {
   PlayIcon,
@@ -13,9 +13,11 @@ import {
 export default function ContentCard({
   content,
   onClick,
+  priority = false,
 }: {
   content: Content;
   onClick?: (content: Content) => void;
+  priority?: boolean;
 }) {
 
   const sourceColors: Record<string, string> = {
@@ -62,10 +64,14 @@ export default function ContentCard({
       {/* Thumbnail or Icon container */}
       <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center group">
         {content.thumbnail ? (
-          <img
+          <Image
             src={content.thumbnail}
             alt={content.title}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={priority}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            unoptimized={content.thumbnail.startsWith('data:')}
           />
         ) : (
           <IconComponent className="h-16 w-16 text-slate-700 group-hover:text-violet-500 transition-colors" />

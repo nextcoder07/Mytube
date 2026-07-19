@@ -16,7 +16,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/30 dark:bg-gray-900/30 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2 md:px-6">
+      <nav className="max-w-7xl mx-auto flex items-center justify-between px-2 py-1 md:px-4">
         <div className="flex items-center space-x-2">
           {/* Mobile hamburger menu toggle */}
           <button
