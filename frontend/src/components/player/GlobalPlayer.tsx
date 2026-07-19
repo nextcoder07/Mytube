@@ -390,7 +390,7 @@ export default function GlobalPlayer() {
 
       {/* Right Section: Suggestions / Queue */}
       {!isMinimized && (
-        <div className="w-full xl:w-[280px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden order-2 mt-6 xl:mt-0">
+        <div className="w-full xl:w-[280px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden order-1 xl:order-2 mt-6 xl:mt-0">
           <div className="p-4 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">
@@ -409,7 +409,7 @@ export default function GlobalPlayer() {
               <div
                 key={item.id}
                 onClick={() => play(item)}
-                className="w-full max-w-[360px] sm:max-w-none xl:max-w-none xl:min-w-0 flex flex-col gap-3 group cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5"
+                className="min-w-[280px] sm:min-w-[320px] w-full xl:w-auto xl:max-w-none xl:min-w-0 flex flex-col gap-3 group cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5"
               >
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
                   {item.thumbnail ? (
