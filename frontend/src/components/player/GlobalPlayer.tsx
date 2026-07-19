@@ -366,7 +366,7 @@ export default function GlobalPlayer() {
 
       {/* Right Section: Suggestions / Queue */}
       {!isMinimized && (
-        <div className="w-full xl:w-[420px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden">
+        <div className="w-full xl:w-[233px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden">
           <div className="p-4 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">

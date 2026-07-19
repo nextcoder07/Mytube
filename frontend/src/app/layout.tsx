@@ -40,22 +40,39 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} h-full bg-gray-900 text-white`} suppressHydrationWarning>
+      {"\n"}
       <body className="flex min-h-screen flex-col">
+        {"\n"}
         <Providers>
+          {"\n"}
           <Navbar />
+          {"\n"}
           <div className="flex flex-1 overflow-hidden">
+            {"\n"}
             <Sidebar />
+            {"\n"}
             <main className="flex-1 flex flex-col overflow-hidden relative">
+              {"\n"}
               <MainContentWrapper>
+                {"\n"}
                 <div className="flex-1 p-4 lg:p-8">
+                  {"\n"}
                   {children}
+                  {"\n"}
                 </div>
+                {"\n"}
               </MainContentWrapper>
+              {"\n"}
             </main>
+            {"\n"}
           </div>
+          {"\n"}
           <Footer />
+          {"\n"}
         </Providers>
+        {"\n"}
       </body>
+      {"\n"}
     </html>
   );
 }
