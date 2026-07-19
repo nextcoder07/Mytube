@@ -287,6 +287,42 @@ export default function GlobalPlayer() {
               <div className="mt-6 p-4 bg-gray-800/50 rounded-xl border border-gray-800 text-sm text-gray-300 leading-relaxed">
                 {activeContent.description}
               </div>
+              {/* Mobile Up Next placed inline before Watch Before */}
+              <div className="xl:hidden mt-8">
+                <div className="flex items-center justify-between px-2 py-3">
+                  <h3 className="font-bold text-white text-lg">Up Next</h3>
+                  <div className="flex gap-1">
+                    <button onClick={previous} className="p-1.5 hover:bg-gray-800 rounded-md text-gray-400 transition-colors">
+                      <ChevronLeftIcon className="w-5 h-5" />
+                    </button>
+                    <button onClick={next} className="p-1.5 hover:bg-gray-800 rounded-md text-gray-400 transition-colors">
+                      <ChevronRightIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-4 overflow-x-auto px-2 pb-2">
+                  {queue.filter(q => q.id !== activeContent.id).map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => play(item)}
+                      className="min-w-[320px] sm:min-w-[360px] flex flex-col gap-3 group cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5"
+                    >
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                        {item.thumbnail ? (
+                          <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs font-bold uppercase">{item.source}</div>
+                        )}
+                      </div>
+                      <div className="flex flex-col py-1 overflow-hidden">
+                        <p className="text-sm font-semibold text-gray-200 group-hover:text-violet-400 line-clamp-2 leading-snug">{item.title}</p>
+                        <p className="text-xs text-gray-500 mt-1 font-medium">{item.author}</p>
+                        <p className="text-xs text-gray-500">{item.source}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               {/* Suggestion rows: Watch Before, Watch After, Related list */}
               <div className="mt-6 space-y-6">
                 {/* Watch Before */}
@@ -390,7 +426,7 @@ export default function GlobalPlayer() {
 
       {/* Right Section: Suggestions / Queue */}
       {!isMinimized && (
-        <div className="w-full xl:w-[280px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden order-2 xl:order-2 mt-6 xl:mt-0">
+        <div className="hidden xl:flex w-full xl:w-[280px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden order-2 xl:order-2 mt-6 xl:mt-0">
           <div className="p-4 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">
