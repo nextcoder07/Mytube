@@ -418,9 +418,7 @@ export default function GlobalPlayer() {
                 <div>
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-200">Related</h4>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setRelatedLimit((n) => n + RELATED_LOAD_STEP)} className="text-xs text-violet-400">Load more</button>
-                    </div>
+                    <div></div>
                   </div>
                     <div className="mt-3 grid grid-cols-1 gap-4">
                     {relatedList.slice(0, relatedLimit).map((item) => (
@@ -459,6 +457,9 @@ export default function GlobalPlayer() {
                       </div>
                     ))}
                   </div>
+                  <div className="flex items-center gap-3">
+                      <button onClick={() => setRelatedLimit((n) => n + RELATED_LOAD_STEP)} className="text-xs text-violet-400">Load more</button>
+                    </div>
                 </div>
               </div>
             </div>
