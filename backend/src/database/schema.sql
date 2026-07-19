@@ -176,3 +176,14 @@ create table if not exists public.watch_history (
 create index if not exists watch_history_user_id_idx on public.watch_history(user_id);
 create index if not exists watch_history_watched_at_idx on public.watch_history(watched_at desc);
 
+-- FEED HISTORY TABLE (tracks content opened/played from the feed page)
+create table if not exists public.feed_history (
+  id uuid default uuid_generate_v4() primary key,
+  user_id varchar(255) not null references public.users(id) on delete cascade,
+  content_id varchar(255) not null references public.content(id) on delete cascade,
+  goal_id uuid references public.goals(id) on delete set null,
+  opened_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+create index if not exists feed_history_user_id_idx on public.feed_history(user_id);
+create index if not exists feed_history_opened_at_idx on public.feed_history(opened_at desc);
+

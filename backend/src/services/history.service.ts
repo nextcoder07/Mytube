@@ -147,6 +147,136 @@ export class HistoryService {
       };
     }).filter(Boolean);
   }
+  /**
+   * Record that a content item was opened/played from the feed page
+   */
+  static async recordFeedOpen(
+    userId: string,
+    content: Content,
+    goalId?: string
+  ) {
+    // 1. Ensure the content exists in the content table
+    const contentRecord = {
+      id: content.id,
+      title: content.title,
+      url: content.url,
+      source: content.source,
+      type: content.type,
+      thumbnail: content.thumbnail || null,
+      description: content.description || null,
+      author: content.author || null,
+      duration: content.duration || null,
+      view_count: content.viewCount || 0,
+      tags: content.tags || [],
+      language: content.language || "en",
+      metadata: content.metadata || {},
+    };
+
+    const { error: contentError } = await supabase
+      .from("content")
+      .upsert(contentRecord, { onConflict: "id" });
+
+    if (contentError) {
+      console.error("Failed to upsert content for feed history:", contentError.message);
+      throw contentError;
+    }
+
+    // 2. Insert the feed history entry
+    const feedEntry = {
+      user_id: userId,
+      content_id: content.id,
+      goal_id: goalId || null,
+      opened_at: new Date().toISOString(),
+    };
+
+    const { data: feedData, error: feedError } = await supabase
+      .from("feed_history")
+      .insert(feedEntry)
+      .select("id, opened_at, goal_id")
+      .single();
+
+    if (feedError) {
+      console.error("Failed to record feed history:", feedError.message);
+      throw feedError;
+    }
+
+    return {
+      id: feedData.id,
+      openedAt: feedData.opened_at,
+      goalId: feedData.goal_id,
+      content,
+    };
+  }
+
+  /**
+   * Get feed history items for a user, joined with full content details
+   */
+  static async getFeedHistory(userId: string, goalId?: string) {
+    let query = supabase
+      .from("feed_history")
+      .select(`
+        id,
+        opened_at,
+        goal_id,
+        content:content (
+          id,
+          title,
+          url,
+          source,
+          type,
+          thumbnail,
+          description,
+          author,
+          duration,
+          difficulty,
+          summary,
+          tags,
+          language,
+          metadata,
+          view_count
+        )
+      `)
+      .eq("user_id", userId)
+      .order("opened_at", { ascending: false });
+
+    if (goalId) {
+      query = query.eq("goal_id", goalId);
+    }
+
+    const { data, error } = await query.limit(100);
+
+    if (error) {
+      console.error("Failed to fetch feed history:", error.message);
+      throw error;
+    }
+
+    return (data || []).map((item: any) => {
+      if (!item.content) return null;
+      const content = item.content;
+      return {
+        id: item.id,
+        openedAt: item.opened_at,
+        goalId: item.goal_id,
+        content: {
+          id: content.id,
+          title: content.title,
+          url: content.url,
+          source: content.source,
+          type: content.type,
+          thumbnail: content.thumbnail,
+          description: content.description,
+          author: content.author,
+          duration: content.duration,
+          difficulty: content.difficulty,
+          summary: content.summary,
+          tags: content.tags,
+          language: content.language,
+          metadata: content.metadata,
+          viewCount: content.view_count,
+        } as Content,
+      };
+    }).filter(Boolean);
+  }
 }
 
 export default HistoryService;

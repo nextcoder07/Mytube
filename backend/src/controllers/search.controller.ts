@@ -5,6 +5,7 @@ import providerManager from "../providers";
 import { searchCache } from "../cache/search-cache";
 import { success } from "../utils/response";
 import { HttpError } from "../utils/errors";
+import { authenticate } from "../middleware/auth";
 
 export const search = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -123,6 +124,33 @@ export const getSearchHistory = async (req: Request, res: Response, next: NextFu
 
     const history = await SearchService.getHistory(user.uid);
     res.status(200).json(success(history, "Search history fetched"));
+  } catch (err: any) {
+    next(err);
+  }
+};
+
+export const deleteSearchHistoryEntry = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = (req as any).user;
+    if (!user) return next(new HttpError(401, "Unauthorized"));
+
+    const { id } = req.params;
+    if (!id) return next(new HttpError(400, "ID param is required"));
+
+    await SearchService.deleteHistoryEntry(user.uid, id);
+    res.status(200).json(success(null, "Search history entry deleted"));
+  } catch (err: any) {
+    next(err);
+  }
+};
+
+export const clearSearchHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = (req as any).user;
+    if (!user) return next(new HttpError(401, "Unauthorized"));
+
+    await SearchService.clearHistory(user.uid);
+    res.status(200).json(success(null, "Search history cleared"));
   } catch (err: any) {
     next(err);
   }

@@ -628,10 +628,35 @@ Schema:
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
 
     if (error) throw error;
     return data;
+  }
+
+  /**
+   * Delete a single search history entry by ID (must belong to the user)
+   */
+  static async deleteHistoryEntry(userId: string, id: string) {
+    if (!isSupabaseConfigured()) return;
+    const { error } = await supabase
+      .from("search_history")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+    if (error) throw error;
+  }
+
+  /**
+   * Delete ALL search history entries for a user
+   */
+  static async clearHistory(userId: string) {
+    if (!isSupabaseConfigured()) return;
+    const { error } = await supabase
+      .from("search_history")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw error;
   }
 }
 
