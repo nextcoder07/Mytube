@@ -3,6 +3,8 @@ import { create } from "zustand";
 import { persist } from 'zustand/middleware';
 import { Content } from "../types/content";
 import { useSearchStore } from './search.store';
+import { api } from "../lib/api";
+
 
 interface PlayerState {
   activeContent: Content | null;
@@ -68,6 +70,12 @@ export const usePlayerStore = create<PlayerState>()(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const searchState: any = useSearchStore.getState();
             const currentGoalId = (opts && opts.goalId) || searchState?.params?.goalId || null;
+
+            // Sync to backend database
+            api.post('/history', { content, goalId: currentGoalId || undefined }).catch((err) => {
+              console.warn('Failed to sync watch history to DB:', err.message || err);
+            });
+
             // call recordWatch via set to access latest state
             const watchedAt = new Date().toISOString();
             const watchEntry = { content, watchedAt, goalId: currentGoalId || undefined };
@@ -107,6 +115,12 @@ export const usePlayerStore = create<PlayerState>()(
           const watchedAt = new Date().toISOString();
           const searchState = useSearchStore.getState() as { params?: { goalId?: string } } | undefined;
           const currentGoalId = (opts && opts.goalId) || searchState?.params?.goalId || null;
+
+          // Sync to backend database
+          api.post('/history', { content, goalId: currentGoalId || undefined }).catch((err) => {
+            console.warn('Failed to sync watch history to DB:', err.message || err);
+          });
+
           const watchEntry = { content, watchedAt, goalId: currentGoalId || undefined };
           const twoMonthsAgo = Date.now() - 60 * 24 * 60 * 60 * 1000;
           const updatedWatchHistory = [...(state.watchHistory || []), watchEntry]

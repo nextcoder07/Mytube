@@ -6,7 +6,7 @@ import ContentGrid from '../../components/content/ContentGrid';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useFeed } from '../../hooks/useFeed';
 import { useGoals } from '../../hooks/useGoals';
-import { usePlayerStore } from '../../store/player.store';
+
 
 const providerOptions = [
   { id: 'youtube', label: 'YouTube' },
@@ -24,10 +24,8 @@ export default function FeedPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshExcludedIds, setRefreshExcludedIds] = useState<string[]>([]);
 
-  const watchHistoryIds = usePlayerStore((state) => state.watchHistory.map((entry) => entry.content.id));
-  const goalHistoryIds = usePlayerStore((state) => state.goalHistory.map((entry) => entry.content.id));
-  const baseExcludedIds = Array.from(new Set([...watchHistoryIds, ...goalHistoryIds]));
-  const excludedIds = Array.from(new Set([...baseExcludedIds, ...refreshExcludedIds]));
+  const excludedIds = refreshExcludedIds;
+
 
   const { goals, isLoading: goalsLoading } = useGoals();
   const activeGoals = goals.filter((goal) => goal.status === 'active');

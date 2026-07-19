@@ -164,3 +164,15 @@ create table if not exists public.recommendations (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(user_id, content_id)
 );
+
+-- WATCH HISTORY TABLE
+create table if not exists public.watch_history (
+  id uuid default uuid_generate_v4() primary key,
+  user_id varchar(255) not null references public.users(id) on delete cascade,
+  content_id varchar(255) not null references public.content(id) on delete cascade,
+  goal_id uuid references public.goals(id) on delete set null,
+  watched_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+create index if not exists watch_history_user_id_idx on public.watch_history(user_id);
+create index if not exists watch_history_watched_at_idx on public.watch_history(watched_at desc);
+

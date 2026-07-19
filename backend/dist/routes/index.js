@@ -17,6 +17,7 @@ const ai_routes_1 = __importDefault(require("./ai.routes"));
 const analytics_routes_1 = __importDefault(require("./analytics.routes"));
 const status_routes_1 = __importDefault(require("./status.routes"));
 const debug_routes_1 = __importDefault(require("./debug.routes"));
+const history_routes_1 = __importDefault(require("./history.routes"));
 const config_1 = __importDefault(require("../config"));
 const router = (0, express_1.Router)();
 router.use("/auth", auth_routes_1.default);
@@ -33,6 +34,7 @@ router.use("/notes", notes_routes_1.default);
 router.use("/summary", summary_routes_1.default);
 router.use("/ai", ai_routes_1.default);
 router.use("/analytics", analytics_routes_1.default);
+router.use("/history", history_routes_1.default);
 router.use('/status', status_routes_1.default);
 exports.default = router;
 //# sourceMappingURL=index.js.map

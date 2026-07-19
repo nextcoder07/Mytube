@@ -12,6 +12,7 @@ import aiRouter from "./ai.routes";
 import analyticsRouter from "./analytics.routes";
 import statusRouter from './status.routes';
 import debugRouter from './debug.routes';
+import historyRouter from "./history.routes";
 import config from "../config";
 
 const router = Router();
@@ -30,7 +31,9 @@ router.use("/notes", notesRouter);
 router.use("/summary", summaryRouter);
 router.use("/ai", aiRouter);
 router.use("/analytics", analyticsRouter);
+router.use("/history", historyRouter);
 router.use('/status', statusRouter);
+
 
 
 export default router;

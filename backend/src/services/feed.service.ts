@@ -54,13 +54,27 @@ export class FeedService {
       const query = goalQueryParts.join(' OR ');
       const focusedGoalId = effectiveGoals[0]?.id;
 
+      // Fetch watched items to exclude from the feed (only if watched > 1 hour ago)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: watchedRecords } = await supabase
+        .from("watch_history")
+        .select("content_id")
+        .eq("user_id", userId)
+        .lt("watched_at", oneHourAgo);
+
+      const dbExcludeIds = (watchedRecords || []).map((r: any) => r.content_id);
+      const combinedExcludeIds = Array.from(new Set([
+        ...(excludeIds || []),
+        ...dbExcludeIds
+      ]));
+
       const searchOptions: SearchOptions = {
         page,
         limit,
         providers: selectedProviders,
         goalId: focusedGoalId,
         aiContext: [goalContext, profileContextParts.join('. ')].filter(Boolean).join('. '),
-        excludeIds,
+        excludeIds: combinedExcludeIds,
         useCache,
       };
 
@@ -99,8 +113,22 @@ export class FeedService {
       },
     }));
 
-    if (excludeIds && excludeIds.length > 0) {
-      const excludeSet = new Set(excludeIds);
+    // Fetch watched items to exclude (only if watched > 1 hour ago)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: watchedRecords } = await supabase
+      .from("watch_history")
+      .select("content_id")
+      .eq("user_id", userId)
+      .lt("watched_at", oneHourAgo);
+
+    const dbExcludeIds = (watchedRecords || []).map((r: any) => r.content_id);
+    const combinedExcludeIds = Array.from(new Set([
+      ...(excludeIds || []),
+      ...dbExcludeIds
+    ]));
+
+    if (combinedExcludeIds.length > 0) {
+      const excludeSet = new Set(combinedExcludeIds);
       recommendations = recommendations.filter((item) => !excludeSet.has(item.id));
     }
 
@@ -108,7 +136,7 @@ export class FeedService {
       return recommendations;
     }
 
-    const fallbackFeed = await this.getFeed(userId, 1, 10, undefined, excludeIds);
+    const fallbackFeed = await this.getFeed(userId, 1, 10, undefined, combinedExcludeIds);
     return fallbackFeed.content;
   }
 }
