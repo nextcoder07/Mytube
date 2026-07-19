@@ -159,7 +159,7 @@ export default function GlobalPlayer() {
         <div className={isMinimized ? "aspect-video bg-black flex items-center justify-center relative overflow-hidden" : "w-full bg-black aspect-video xl:max-h-[70vh] flex items-center justify-center relative shadow-xl overflow-hidden"}>
           {/* Controls Overlay */}
           {!isMinimized && (
-            <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <div className="absolute top-16 right-4 flex gap-2 z-10">
               <button onClick={minimize} className="p-2 bg-black/50 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm transition-colors border border-white/10" title="Minimize">
                 <MinusSmallIcon className="w-5 h-5" />
               </button>
