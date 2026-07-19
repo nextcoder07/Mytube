@@ -156,7 +156,7 @@ export default function GlobalPlayer() {
         )}
 
         {/* Main Media Player Area */}
-        <div className={isMinimized ? "aspect-video bg-black flex items-center justify-center relative overflow-hidden" : "w-full bg-black aspect-[16/9] lg:max-h-[72vh] xl:max-h-[78vh] min-h-[340px] flex items-center justify-center relative shadow-xl overflow-hidden"}>
+        <div className={isMinimized ? "aspect-video bg-black flex items-center justify-center relative overflow-hidden" : "w-full bg-black aspect-[16/9] lg:max-h-[76vh] xl:max-h-[82vh] min-h-[420px] flex items-center justify-center relative shadow-xl overflow-hidden"}>
           {/* Controls Overlay */}
           {!isMinimized && (
             <div className="absolute top-16 right-4 flex gap-2 z-10">
