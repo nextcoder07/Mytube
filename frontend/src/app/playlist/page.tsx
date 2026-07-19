@@ -78,7 +78,12 @@ export default function PlaylistPage() {
                   <div key={item.content?.id || item.contentId} className="rounded-2xl border border-gray-800 bg-gray-950/70 p-3 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => play(item.content, watchLaterPlaylist.items?.map((entry: PlaylistItem) => entry.content).filter(Boolean) as Content[])}
+                      onClick={() => {
+                        const playlistContents = (watchLaterPlaylist.items || [])
+                          .map((entry: PlaylistItem) => entry.content)
+                          .filter((content): content is Content => Boolean(content));
+                        play(item.content as Content, playlistContents);
+                      }}
                       className="flex-1 text-left"
                     >
                       <p className="text-sm font-semibold text-white line-clamp-2">{item.content?.title || 'Untitled'}</p>
