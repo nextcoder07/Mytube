@@ -6,8 +6,10 @@ import { usePlayerStore } from "../../store/player.store";
 
 export default function ContentGrid({
   items,
+  onClick,
 }: {
   items: Content[];
+  onClick?: (content: Content) => void;
 }) {
   const { play } = usePlayerStore();
 
@@ -25,7 +27,7 @@ export default function ContentGrid({
         <div key={item.id} className="h-full content-visibility-auto">
           <ContentCard
             content={item}
-            onClick={(c) => play(c, items)}
+            onClick={(c) => onClick ? onClick(c) : play(c, items)}
             priority={index < 4}
           />
         </div>
