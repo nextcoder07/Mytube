@@ -6,6 +6,8 @@ import ContentGrid from '../../components/content/ContentGrid';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useFeed } from '../../hooks/useFeed';
 import { useGoals } from '../../hooks/useGoals';
+import { usePlayerStore } from '../../store/player.store';
+import { api } from '../../lib/api';
 
 
 const providerOptions = [
@@ -44,6 +46,7 @@ export default function FeedPage() {
     selectedGoalId ?? undefined,
     refreshKey
   );
+  const { play } = usePlayerStore();
 
   const hasGoals = activeGoals.length > 0;
   const focusedGoal = selectedGoalId ? activeGoals.find((goal) => goal.id === selectedGoalId) : null;
@@ -176,7 +179,22 @@ export default function FeedPage() {
             </div>
           ) : (
             <>
-              <ContentGrid items={displayItems} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {displayItems.map((item) => (
+                  <div key={item.id} className="h-full">
+                    <ContentGrid
+                      items={[item]}
+                      onClick={(content) => {
+                        // play through the player store and record feed history separately
+                        play(content, displayItems);
+                        api.post('/history/feed', { content, goalId: selectedGoalId ?? undefined }).catch((err) => {
+                          console.warn('Failed to sync feed history to DB:', err.message || err);
+                        });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
               {hasMore && (
                 <div className="flex justify-center mt-8">
                   <button

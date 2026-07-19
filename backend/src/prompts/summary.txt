@@ -2,6 +2,10 @@ Summarize this content for a learner:
 Title: {{title}}
 Description: {{description}}
 URL: {{url}}
+Transcript/Captions: {{transcript}}
+Screen notes & timestamps: {{visualNotes}}
+
+Use the transcript/captions and screen notes when available to improve the accuracy of the summary. If transcript or visual notes are not provided, say "No transcript or visual notes available." and continue with the available content.
 
 You MUST respond with a valid JSON object ONLY. Do not include markdown formatting like ```json or any other text before/after the JSON.
 Follow this schema exactly:

@@ -9,12 +9,15 @@ export const getContentSummary = async (req: Request, res: Response, next: NextF
     const user = (req as any).user;
     if (!user) return next(new HttpError(401, "Unauthorized"));
 
-    const { contentId } = req.body;
+    const { contentId, transcript, visualNotes } = req.body;
     if (!contentId) {
       return next(new HttpError(400, "contentId parameter is required"));
     }
 
-    const summary = await SummaryService.getContentSummary(user.uid, contentId);
+    const summary = await SummaryService.getContentSummary(user.uid, contentId, {
+      transcript,
+      visualNotes,
+    });
     res.status(200).json(success(summary, "Summary retrieved"));
   } catch (err: any) {
     next(err);

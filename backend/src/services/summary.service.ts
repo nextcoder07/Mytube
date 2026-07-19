@@ -4,48 +4,62 @@ import redis from "../config/redis";
 import AIGateway from "../ai/gateway";
 import { buildPrompt } from "../ai/prompt";
 
+export interface SummaryOptions {
+  transcript?: string;
+  visualNotes?: string;
+}
+
 export class SummaryService {
   /**
    * Get AI summary for content using cache-first pattern (DB -> Redis -> AI generation).
    */
-  static async getContentSummary(userId: string, contentId: string) {
-    // 1. Check DB summaries table
-    const { data: dbSummary, error: dbError } = await supabase
-      .from("summaries")
-      .select("*")
-      .eq("content_id", contentId)
-      .single();
+  static async getContentSummary(userId: string, contentId: string, options: SummaryOptions = {}) {
+    const extraContext = {
+      transcript: options.transcript?.trim() || "",
+      visualNotes: options.visualNotes?.trim() || "",
+    };
 
-    if (dbSummary) {
-      return {
-        summary: dbSummary.summary,
-        keyPoints: dbSummary.key_points,
-        cached: true,
-        source: "database",
-      };
-    }
+    const hasCustomContext = Boolean(extraContext.transcript || extraContext.visualNotes);
 
-    // 2. Check Redis cache
-    const cacheKey = `summary:${contentId}`;
-    try {
-      const cachedVal = await redis.get(cacheKey);
-      if (cachedVal) {
-        const parsed = JSON.parse(cachedVal);
-        // Persist back to DB asynchronously so it's faster next time
-        this.saveSummaryToDb(contentId, parsed.summary, parsed.keyPoints).catch((e) =>
-          console.error("Failed to async save summary to DB:", e.message)
-        );
+    if (!hasCustomContext) {
+      // 1. Check DB summaries table
+      const { data: dbSummary, error: dbError } = await supabase
+        .from("summaries")
+        .select("*")
+        .eq("content_id", contentId)
+        .single();
+
+      if (dbSummary) {
         return {
-          ...parsed,
+          summary: dbSummary.summary,
+          keyPoints: dbSummary.key_points,
           cached: true,
-          source: "redis",
+          source: "database",
         };
       }
-    } catch (redisErr: any) {
-      console.warn("Redis read error in summary service:", redisErr.message);
+
+      // 2. Check Redis cache
+      const cacheKey = `summary:${contentId}`;
+      try {
+        const cachedVal = await redis.get(cacheKey);
+        if (cachedVal) {
+          const parsed = JSON.parse(cachedVal);
+          // Persist back to DB asynchronously so it's faster next time
+          this.saveSummaryToDb(contentId, parsed.summary, parsed.keyPoints).catch((e) =>
+            console.error("Failed to async save summary to DB:", e.message)
+          );
+          return {
+            ...parsed,
+            cached: true,
+            source: "redis",
+          };
+        }
+      } catch (redisErr: any) {
+        console.warn("Redis read error in summary service:", redisErr.message);
+      }
     }
 
-    // 3. Cache miss: Fetch content details to summarize
+    // 3. Fetch content details to summarize
     const { data: content, error: contentError } = await supabase
       .from("content")
       .select("*")
@@ -61,6 +75,8 @@ export class SummaryService {
       title: content.title,
       description: content.description || "No description provided.",
       url: content.url,
+      transcript: extraContext.transcript || "No transcript or captions provided.",
+      visualNotes: extraContext.visualNotes || "No visual notes or screenshot timestamps provided.",
     });
 
     const aiResponse = await AIGateway.generate(prompt);
@@ -76,23 +92,25 @@ export class SummaryService {
     const summaryText = parsed.summary;
     const keyPointsArray = parsed.key_points || [];
 
-    // 5. Store to DB & Redis Cache
-    this.saveSummaryToDb(contentId, summaryText, keyPointsArray).catch((e) =>
-      console.error("Failed to save summary to DB:", e.message)
-    );
+    if (!hasCustomContext) {
+      // 5. Store to DB & Redis Cache for generic summaries
+      this.saveSummaryToDb(contentId, summaryText, keyPointsArray).catch((e) =>
+        console.error("Failed to save summary to DB:", e.message)
+      );
 
-    try {
-      const cacheVal = JSON.stringify({ summary: summaryText, keyPoints: keyPointsArray });
-      await redis.set(cacheKey, cacheVal, "EX", 7 * 24 * 3600); // 7 days TTL (plan.md section 12)
-    } catch (redisErr: any) {
-      console.warn("Redis write error in summary service:", redisErr.message);
+      try {
+        const cacheVal = JSON.stringify({ summary: summaryText, keyPoints: keyPointsArray });
+        await redis.set(`summary:${contentId}`, cacheVal, "EX", 7 * 24 * 3600); // 7 days TTL
+      } catch (redisErr: any) {
+        console.warn("Redis write error in summary service:", redisErr.message);
+      }
     }
 
     return {
       summary: summaryText,
       keyPoints: keyPointsArray,
       cached: false,
-      source: "ai",
+      source: hasCustomContext ? "ai-custom" : "ai",
     };
   }
 

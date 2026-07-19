@@ -1,5 +1,5 @@
 // src/components/content/ContentDetail.tsx
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Summary } from "../../types/content";
 import api from "../../lib/api";
 import LoadingSpinner from "../common/LoadingSpinner";
@@ -15,26 +15,33 @@ export default function ContentDetail({
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState("");
+  const [visualNotes, setVisualNotes] = useState("");
+
+  const fetchSummary = useCallback(async (options?: { transcript?: string; visualNotes?: string }) => {
+    if (!contentId) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await api.post("/summary", {
+        contentId,
+        transcript: options?.transcript,
+        visualNotes: options?.visualNotes,
+      });
+      setSummary(res.data.data);
+    } catch (err) {
+      console.error("Summary error:", err);
+      setError("Failed to generate AI summary. Please check your API configuration or try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [contentId]);
 
   useEffect(() => {
     if (!contentId) return;
-
-    const fetchSummary = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await api.post("/summary", { contentId });
-        setSummary(res.data.data);
-      } catch (err) {
-        console.error("Summary error:", err);
-        setError("Failed to generate AI summary. Please check your API configuration or try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSummary();
-  }, [contentId]);
+  }, [contentId, fetchSummary]);
 
   if (!contentId) return null;
 
@@ -58,6 +65,54 @@ export default function ContentDetail({
 
         {/* Content body */}
         <div className="p-6 overflow-y-auto max-h-[70vh]">
+          <div className="space-y-5 mb-6">
+            <div className="rounded-3xl border border-gray-800 bg-gray-900/70 p-4">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Enriched video summary</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Paste transcript/caption text or describe screen content and timestamps to produce a richer summary.
+                  </p>
+                </div>
+                <button
+                  onClick={() => fetchSummary({ transcript, visualNotes })}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-semibold rounded-2xl bg-violet-600 hover:bg-violet-500 text-white transition disabled:opacity-50"
+                >
+                  {loading ? "Generating…" : "Generate enriched summary"}
+                </button>
+              </div>
+
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Transcript / captions
+                  </label>
+                  <textarea
+                    value={transcript}
+                    onChange={(e) => setTranscript(e.target.value)}
+                    rows={4}
+                    placeholder="Paste spoken text, closed captions, or dialogue here."
+                    className="w-full rounded-2xl border border-gray-800 bg-gray-950 text-sm text-gray-100 placeholder-gray-600 p-3 focus:border-violet-500 focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Screen notes & timestamps
+                  </label>
+                  <textarea
+                    value={visualNotes}
+                    onChange={(e) => setVisualNotes(e.target.value)}
+                    rows={4}
+                    placeholder="Describe what appears on screen, include timestamps or thumbnail notes, e.g. 00:12 - dashboard view, 01:30 - chart explanation."
+                    className="w-full rounded-2xl border border-gray-800 bg-gray-950 text-sm text-gray-100 placeholder-gray-600 p-3 focus:border-violet-500 focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center">
               <LoadingSpinner size="md" />
