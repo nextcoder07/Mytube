@@ -136,7 +136,7 @@ export default function GlobalPlayer() {
     <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200"}>
 
       {/* Left/Main Section for Maximized OR PIP wrapper for Minimized */}
-      <div className={isMinimized ? "w-full flex flex-col" : "w-full xl:flex-1 flex flex-col xl:overflow-y-auto order-1"}>
+      <div className={isMinimized ? "w-full flex flex-col xl:order-1 order-2" : "w-full xl:flex-1 flex flex-col xl:overflow-y-auto xl:order-1 order-2"}>
 
         {/* PIP Header */}
         {isMinimized && (
@@ -345,16 +345,36 @@ export default function GlobalPlayer() {
                   </div>
                     <div className="mt-3 grid grid-cols-1 gap-4">
                     {relatedList.map((item) => (
-                        <div key={`rel-${item.id}`} className="flex flex-col gap-3 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5 shadow-sm shadow-black/20" onClick={() => play(item, relatedList)}>
-                        <div className="w-full max-w-[360px] sm:w-[280px] md:w-[340px] lg:w-[420px] aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
-                          {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
+                      <div
+                        key={`rel-${item.id}`}
+                        className="flex flex-col lg:flex-row gap-4 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-4 shadow-sm shadow-black/20"
+                        onClick={() => play(item, relatedList)}
+                      >
+                        <div className="w-full lg:w-[320px] xl:w-[360px] aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                          {item.thumbnail ? (
+                            <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-700" />
+                          )}
                         </div>
-                        <div className="flex-1 space-y-2">
-                          <p className="text-sm font-semibold text-gray-100 line-clamp-2 leading-snug">{item.title}</p>
-                          <p className="text-xs text-gray-400">{item.author}</p>
-                          <div className="flex flex-wrap gap-3">
-                            <button onClick={(e) => { e.stopPropagation(); play(item, relatedList); }} className="text-xs text-violet-400">Play</button>
-                            <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                        <div className="flex-1 flex flex-col justify-between">
+                          <div>
+                            <p className="text-base font-semibold text-gray-100 line-clamp-3 leading-snug">{item.title}</p>
+                            <p className="text-xs text-gray-400 mt-3">{item.author}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-3 mt-4">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); play(item, relatedList); }}
+                              className="text-xs text-violet-400"
+                            >
+                              Play
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }}
+                              className="text-xs text-gray-400"
+                            >
+                              Add to Queue
+                            </button>
                           </div>
                         </div>
                       </div>

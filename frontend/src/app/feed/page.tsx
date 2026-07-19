@@ -2,7 +2,6 @@
 // frontend/src/app/feed/page.tsx
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import ContentGrid from '../../components/content/ContentGrid';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useFeed } from '../../hooks/useFeed';
 import { useGoals } from '../../hooks/useGoals';
@@ -181,18 +180,43 @@ export default function FeedPage() {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {displayItems.map((item) => (
-                  <div key={item.id} className="h-full">
-                    <ContentGrid
-                      items={[item]}
-                      onClick={(content) => {
-                        // play through the player store and record feed history separately
-                        play(content, displayItems);
-                        api.post('/history/feed', { content, goalId: selectedGoalId ?? undefined }).catch((err) => {
-                          console.warn('Failed to sync feed history to DB:', err.message || err);
-                        });
-                      }}
-                    />
-                  </div>
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      play(item, displayItems);
+                      api.post('/history/feed', { content: item, goalId: selectedGoalId ?? undefined }).catch((err) => {
+                        console.warn('Failed to sync feed history to DB:', err.message || err);
+                      });
+                    }}
+                    className="glow-card group flex flex-col h-full overflow-hidden cursor-pointer hover:border-violet-500/50 transition-colors border border-gray-800 bg-gray-950/80"
+                  >
+                    <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                      {item.thumbnail ? (
+                        <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      ) : (
+                        <div className="h-full w-full bg-gray-700" />
+                      )}
+                      {item.type === 'video' && item.duration ? (
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 text-xs font-semibold text-white rounded">
+                          {Math.floor(item.duration / 60)}:{item.duration % 60 < 10 ? '0' : ''}{item.duration % 60}
+                        </span>
+                      ) : null}
+                      <span className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                        {item.source}
+                      </span>
+                    </div>
+                    <div className="flex-1 p-4 flex flex-col">
+                      <h3 className="text-base font-bold line-clamp-2 text-white mb-2">{item.title}</h3>
+                      <p className="text-xs text-gray-400 line-clamp-3 mb-4 flex-1">{item.description || 'No description available.'}</p>
+                      <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+                        <span>{item.author || 'Unknown author'}</span>
+                        {item.viewCount !== undefined && (
+                          <span>👁️ {item.viewCount.toLocaleString()}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
                 ))}
               </div>
               {hasMore && (
