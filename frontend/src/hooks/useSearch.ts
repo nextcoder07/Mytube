@@ -5,10 +5,10 @@ import { api } from '../lib/api';
 import type { Content } from '../types/content';
 import { useSearchStore } from '../store/search.store';
 
-const BATCH_SIZE = 12; // visible page size
-const INITIAL_YT = 12; // initial YouTube seed size to minimize quota pressure
-const LOAD_MORE_STEP = 12; // normal subsequent batch size
-const FALLBACK_LOAD_MORE_STEP = 12; // reduced batch when token/quota constraints
+const BATCH_SIZE = 25; // visible page size
+const INITIAL_YT = 25; // initial YouTube seed size to minimize quota pressure
+const LOAD_MORE_STEP = 25; // normal subsequent batch size
+const FALLBACK_LOAD_MORE_STEP = 25; // reduced batch when token/quota constraints
 
 export type SearchResponseMeta = {
   youtubeStatus?: {

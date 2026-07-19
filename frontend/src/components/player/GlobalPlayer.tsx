@@ -19,6 +19,10 @@ import {
 } from "@heroicons/react/24/outline";
 import ContentDetail from "../content/ContentDetail";
 
+const WATCH_SUGGESTION_LIMIT = 10;
+const RELATED_SUGGESTION_LIMIT = 25;
+const RELATED_LOAD_STEP = 25;
+
 export default function GlobalPlayer() {
   const {
     activeContent,
@@ -37,7 +41,7 @@ export default function GlobalPlayer() {
   const [watchBefore, setWatchBefore] = useState<Content[]>([]);
   const [watchAfter, setWatchAfter] = useState<Content[]>([]);
   const [relatedList, setRelatedList] = useState<Content[]>([]);
-  const [relatedLimit, setRelatedLimit] = useState(50);
+  const [relatedLimit, setRelatedLimit] = useState(RELATED_SUGGESTION_LIMIT);
   const searchStore = useSearchStore();
 
   const handleSaveToPlaylist = async () => {
@@ -106,11 +110,11 @@ export default function GlobalPlayer() {
       const userQuery = searchStore.params?.q || '';
 
       try {
-        const beforeRes = await api.get('/search/suggestions/before', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: 20 } });
+        const beforeRes = await api.get('/search/suggestions/before', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: WATCH_SUGGESTION_LIMIT } });
         if (!mounted) return;
         setWatchBefore((beforeRes.data?.data as Content[]) || []);
 
-        const afterRes = await api.get('/search/suggestions/after', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: 20 } });
+        const afterRes = await api.get('/search/suggestions/after', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: WATCH_SUGGESTION_LIMIT } });
         if (!mounted) return;
         setWatchAfter((afterRes.data?.data as Content[]) || []);
 
@@ -330,7 +334,7 @@ export default function GlobalPlayer() {
                   <div>
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
                     <div className="flex gap-4 overflow-x-auto py-3">
-                      {watchBefore.map((item) => (
+                      {watchBefore.slice(0, WATCH_SUGGESTION_LIMIT).map((item) => (
                         <div key={`before-${item.id}`} className="w-full max-w-[360px] sm:w-[340px] md:w-[420px] flex-shrink-0 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5 shadow-sm shadow-black/20" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
@@ -353,7 +357,7 @@ export default function GlobalPlayer() {
                   <div>
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
                     <div className="flex gap-4 overflow-x-auto py-3">
-                      {watchAfter.map((item) => (
+                      {watchAfter.slice(0, WATCH_SUGGESTION_LIMIT).map((item) => (
                         <div key={`after-${item.id}`} className="w-full max-w-[360px] sm:w-[340px] md:w-[420px] flex-shrink-0 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5 shadow-sm shadow-black/20" onClick={() => play(item, [item, ...queue])}>
                           <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
@@ -376,11 +380,11 @@ export default function GlobalPlayer() {
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-200">Related</h4>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => setRelatedLimit((n) => n + 50)} className="text-xs text-violet-400">Load more</button>
+                      <button onClick={() => setRelatedLimit((n) => n + RELATED_LOAD_STEP)} className="text-xs text-violet-400">Load more</button>
                     </div>
                   </div>
                     <div className="mt-3 grid grid-cols-1 gap-4">
-                    {relatedList.map((item) => (
+                    {relatedList.slice(0, relatedLimit).map((item) => (
                       <div
                         key={`rel-${item.id}`}
                         className="flex flex-col lg:flex-row gap-4 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-4 shadow-sm shadow-black/20"

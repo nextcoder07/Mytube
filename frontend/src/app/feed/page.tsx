@@ -37,7 +37,7 @@ export default function FeedPage() {
     }
   }, [activeGoals, selectedGoalId]);
 
-  const { items, isLoading, error, loadMore, hasMore, isFetchingNextPage } = useFeed(
+  const { items, isLoading, error, loadMore, hasMore, isFetchingNextPage, refetch } = useFeed(
     false,
     selectedProviders,
     excludedIds,
@@ -115,6 +115,7 @@ export default function FeedPage() {
               onClick={() => {
                 setRefreshExcludedIds(items.map((item) => item.id));
                 setRefreshKey((prev) => prev + 1);
+                void refetch();
               }}
               className="px-3 py-2 rounded-full text-xs font-semibold bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition"
             >

@@ -235,7 +235,7 @@ export default function SearchResults({
 
       <ContentGrid items={processedResults} />
       <div className="flex justify-center gap-4 mt-8 mb-4">
-        {onLoadPrevious && limit && limit > 70 && (
+        {onLoadPrevious && limit && limit > 25 && (
           <button
             onClick={onLoadPrevious}
             disabled={isFetching}
@@ -259,12 +259,12 @@ export default function SearchResults({
             {isFetching ? (
               <>
                 <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                Adding 70 more…
+                Adding 25 more…
               </>
             ) : (
               <>
                 <ArrowPathIcon className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                Load More Results
+                Load 25 More
               </>
             )}
           </button>
