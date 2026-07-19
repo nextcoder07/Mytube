@@ -233,8 +233,10 @@ export default function SearchResults({
         </div>
       )}
 
-      <ContentGrid items={processedResults} />
-      <div className="flex justify-center gap-4 mt-8 mb-4">
+      <div className="mt-6">
+        <ContentGrid items={processedResults} />
+      </div>
+      <div className="flex justify-center gap-4 mt-8 mb-8 pt-2 border-t border-gray-800/60">
         {onLoadPrevious && limit && limit > 25 && (
           <button
             onClick={onLoadPrevious}
