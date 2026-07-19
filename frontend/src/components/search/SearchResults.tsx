@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import ContentGrid from '../content/ContentGrid';
 import type { Content } from '../../types/content';
-import LoadingSpinner from '../common/LoadingSpinner';
 import { useGoals } from '../../hooks/useGoals';
 import { ArrowPathIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 

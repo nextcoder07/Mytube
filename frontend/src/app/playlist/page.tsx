@@ -1,10 +1,10 @@
 'use client';
 // frontend/src/app/playlist/page.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { QueueListIcon, PlusIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import type { Playlist, Content } from '../../types/content';
+import type { Playlist, Content, PlaylistItem } from '../../types/content';
 import { usePlayerStore } from '../../store/player.store';
 
 export default function PlaylistPage() {
@@ -74,11 +74,11 @@ export default function PlaylistPage() {
 
             {watchLaterPlaylist?.items?.length ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {watchLaterPlaylist.items.map((item: any) => (
+                {watchLaterPlaylist.items.map((item: PlaylistItem) => (
                   <div key={item.content?.id || item.contentId} className="rounded-2xl border border-gray-800 bg-gray-950/70 p-3 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => play(item.content, watchLaterPlaylist.items?.map((entry: any) => entry.content).filter(Boolean) as Content[])}
+                      onClick={() => play(item.content, watchLaterPlaylist.items?.map((entry: PlaylistItem) => entry.content).filter(Boolean) as Content[])}
                       className="flex-1 text-left"
                     >
                       <p className="text-sm font-semibold text-white line-clamp-2">{item.content?.title || 'Untitled'}</p>
