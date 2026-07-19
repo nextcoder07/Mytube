@@ -136,7 +136,7 @@ export default function GlobalPlayer() {
     <div className={isMinimized ? "fixed bottom-4 right-4 w-80 shadow-2xl rounded-xl overflow-hidden z-50 bg-gray-950 border border-gray-800 animate-in slide-in-from-bottom-5" : "flex-1 w-full h-full bg-gray-900 flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-200"}>
 
       {/* Left/Main Section for Maximized OR PIP wrapper for Minimized */}
-      <div className={isMinimized ? "w-full flex flex-col" : "w-full xl:flex-1 flex flex-col xl:overflow-y-auto"}>
+      <div className={isMinimized ? "w-full flex flex-col" : "w-full xl:flex-1 flex flex-col xl:overflow-y-auto order-1"}>
 
         {/* PIP Header */}
         {isMinimized && (
@@ -293,16 +293,18 @@ export default function GlobalPlayer() {
                 {watchBefore.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch Before</h4>
-                    <div className="flex gap-3 overflow-x-auto py-2">
+                    <div className="flex gap-4 overflow-x-auto py-3">
                       {watchBefore.map((item) => (
-                        <div key={`before-${item.id}`} className="w-[320px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
-                          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                        <div key={`before-${item.id}`} className="w-full max-w-[360px] sm:w-[340px] md:w-[420px] flex-shrink-0 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5 shadow-sm shadow-black/20" onClick={() => play(item, [item, ...queue])}>
+                          <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
-                          <p className="mt-1 text-xs font-semibold text-gray-200 line-clamp-2">{item.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
-                            <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm font-semibold text-gray-100 line-clamp-2 leading-snug">{item.title}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
+                              <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -314,16 +316,18 @@ export default function GlobalPlayer() {
                 {watchAfter.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-gray-200 mb-2">Watch After</h4>
-                    <div className="flex gap-3 overflow-x-auto py-2">
+                    <div className="flex gap-4 overflow-x-auto py-3">
                       {watchAfter.map((item) => (
-                        <div key={`after-${item.id}`} className="w-[320px] flex-shrink-0 cursor-pointer" onClick={() => play(item, [item, ...queue])}>
-                          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-800">
+                        <div key={`after-${item.id}`} className="w-full max-w-[360px] sm:w-[340px] md:w-[420px] flex-shrink-0 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5 shadow-sm shadow-black/20" onClick={() => play(item, [item, ...queue])}>
+                          <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800">
                             {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                           </div>
-                          <p className="mt-1 text-xs font-semibold text-gray-200 line-clamp-2">{item.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
-                            <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm font-semibold text-gray-100 line-clamp-2 leading-snug">{item.title}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button onClick={(e) => { e.stopPropagation(); play(item, [item, ...queue]); }} className="text-xs text-violet-400">Play</button>
+                              <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -341,14 +345,14 @@ export default function GlobalPlayer() {
                   </div>
                     <div className="mt-3 grid grid-cols-1 gap-4">
                     {relatedList.map((item) => (
-                        <div key={`rel-${item.id}`} className="flex flex-col sm:flex-row gap-4 items-start cursor-pointer" onClick={() => play(item, relatedList)}>
-                        <div className="w-full sm:w-[336px] aspect-video rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+                        <div key={`rel-${item.id}`} className="flex flex-col gap-3 cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5 shadow-sm shadow-black/20" onClick={() => play(item, relatedList)}>
+                        <div className="w-full max-w-[360px] sm:w-[280px] md:w-[340px] lg:w-[420px] aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
                           {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700" />}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-base font-semibold text-gray-200 line-clamp-2">{item.title}</p>
-                          <p className="text-xs text-gray-400 mt-1">{item.author}</p>
-                          <div className="flex gap-3 mt-2">
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-semibold text-gray-100 line-clamp-2 leading-snug">{item.title}</p>
+                          <p className="text-xs text-gray-400">{item.author}</p>
+                          <div className="flex flex-wrap gap-3">
                             <button onClick={(e) => { e.stopPropagation(); play(item, relatedList); }} className="text-xs text-violet-400">Play</button>
                             <button onClick={(e) => { e.stopPropagation(); play(activeContent, [...queue, item]); }} className="text-xs text-gray-400">Add to Queue</button>
                           </div>
@@ -366,7 +370,7 @@ export default function GlobalPlayer() {
 
       {/* Right Section: Suggestions / Queue */}
       {!isMinimized && (
-        <div className="w-full xl:w-[233px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden">
+        <div className="w-full xl:w-[280px] border-t xl:border-t-0 xl:border-l border-gray-800 bg-gray-900 flex flex-col flex-shrink-0 xl:h-full xl:overflow-hidden order-2 mt-6 xl:mt-0">
           <div className="p-4 border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
             <h3 className="font-bold text-white text-lg">Up Next</h3>
             <div className="flex gap-1">
@@ -385,7 +389,7 @@ export default function GlobalPlayer() {
               <div
                 key={item.id}
                 onClick={() => play(item)}
-                className="min-w-[260px] xl:min-w-0 flex flex-col gap-3 group cursor-pointer"
+                className="w-full max-w-[360px] sm:max-w-none xl:max-w-none xl:min-w-0 flex flex-col gap-3 group cursor-pointer rounded-2xl border border-gray-800 bg-gray-900/40 p-2.5"
               >
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
                   {item.thumbnail ? (

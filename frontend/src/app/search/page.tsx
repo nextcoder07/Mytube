@@ -41,13 +41,11 @@ export default function SearchPage() {
     setFilters,
   } = useSearchStore();
 
-  // Sync inputs with the current active query (important when traversing query history)
+  // Keep the input in sync with the user's typing only; do not auto-fill from the last search state.
   useEffect(() => {
-    if (currentQuery) {
-      setQuery(currentQuery);
-      setInputValue(currentQuery);
-    }
-  }, [currentQuery, setQuery, setInputValue]);
+    if (!currentQuery) return;
+    setQuery(currentQuery);
+  }, [currentQuery, setQuery]);
 
   const handleSearch = (q: string) => {
     const trimmed = q.trim();
@@ -63,6 +61,7 @@ export default function SearchPage() {
       videoDuration: filters.videoDuration,
       videoCategoryId: filters.videoCategoryId,
       relevanceLanguage: filters.relevanceLanguage,
+      goalId: undefined,
     });
   };
 

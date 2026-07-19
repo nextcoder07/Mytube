@@ -87,10 +87,6 @@ export default function HistoryPage() {
     return watchHistory.filter((item) => item.goalId);
   }, [watchHistory]);
 
-  const activeGoalCount = useMemo(() => {
-    return new Set(goalHistory.map((item) => item.goalId).filter(Boolean)).size;
-  }, [goalHistory]);
-
   const searchStats = useMemo(() => {
     const providers: Record<string, number> = {};
     rawSearchHistory.forEach((item) => {
