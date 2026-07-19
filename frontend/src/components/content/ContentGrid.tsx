@@ -7,9 +7,11 @@ import { usePlayerStore } from "../../store/player.store";
 export default function ContentGrid({
   items,
   onClick,
+  goalBadgeIds,
 }: {
   items: Content[];
   onClick?: (content: Content) => void;
+  goalBadgeIds?: Set<string>;
 }) {
   const { play } = usePlayerStore();
 
@@ -29,6 +31,7 @@ export default function ContentGrid({
             content={item}
             onClick={(c) => onClick ? onClick(c) : play(c, items)}
             priority={index < 4}
+            goalBadge={goalBadgeIds?.has(item.id)}
           />
         </div>
       ))}

@@ -42,7 +42,34 @@ export default function GlobalPlayer() {
   const [watchAfter, setWatchAfter] = useState<Content[]>([]);
   const [relatedList, setRelatedList] = useState<Content[]>([]);
   const [relatedLimit, setRelatedLimit] = useState(RELATED_SUGGESTION_LIMIT);
+  const [isWatchLaterActive, setIsWatchLaterActive] = useState(false);
   const searchStore = useSearchStore();
+
+  const handleToggleWatchLater = async () => {
+    if (!activeContent) return;
+
+    try {
+      const watchLaterPlaylist = (await api.get('/playlist')).data?.data?.find((playlist: { title?: string }) => playlist.title === 'Watch Later');
+      if (!watchLaterPlaylist?.id) {
+        throw new Error('Watch Later playlist not available');
+      }
+
+      if (isWatchLaterActive) {
+        await api.delete(`/playlist/${watchLaterPlaylist.id}/items/${activeContent.id}`);
+        setIsWatchLaterActive(false);
+        setSaveStatus('Removed from Watch Later');
+      } else {
+        await api.post(`/playlist/${watchLaterPlaylist.id}/items`, { contentId: activeContent.id });
+        setIsWatchLaterActive(true);
+        setSaveStatus('Added to Watch Later');
+      }
+    } catch (err) {
+      console.error('Watch Later toggle error:', err);
+      setSaveStatus('Unable to update Watch Later right now');
+    }
+
+    window.setTimeout(() => setSaveStatus(null), 2500);
+  };
 
   const handleSaveToPlaylist = async () => {
     if (!activeContent) return;
@@ -110,6 +137,11 @@ export default function GlobalPlayer() {
       const userQuery = searchStore.params?.q || '';
 
       try {
+        const watchLaterPlaylist = (await api.get('/playlist')).data?.data?.find((playlist: { title?: string }) => playlist.title === 'Watch Later');
+        const watchLaterItem = watchLaterPlaylist?.items?.some((item: { content?: { id?: string } }) => item.content?.id === activeContent.id);
+        if (!mounted) return;
+        setIsWatchLaterActive(Boolean(watchLaterItem));
+
         const beforeRes = await api.get('/search/suggestions/before', { params: { q: userQuery, contentTitle: activeContent.title, providers: 'youtube', limit: WATCH_SUGGESTION_LIMIT } });
         if (!mounted) return;
         setWatchBefore((beforeRes.data?.data as Content[]) || []);
@@ -271,6 +303,13 @@ export default function GlobalPlayer() {
                   >
                     <DocumentPlusIcon className="w-4 h-4" />
                     Note
+                  </button>
+                  <button
+                    onClick={handleToggleWatchLater}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border ${isWatchLaterActive ? 'bg-violet-600/20 border-violet-500/30 text-violet-300' : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border-gray-700'}`}
+                  >
+                    <BookmarkIcon className="w-4 h-4" />
+                    {isWatchLaterActive ? 'In Watch Later' : 'Watch Later'}
                   </button>
                   <button
                     onClick={handleSaveToPlaylist}

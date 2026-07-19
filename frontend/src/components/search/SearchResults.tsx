@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import ContentGrid from '../content/ContentGrid';
 import type { Content } from '../../types/content';
 import LoadingSpinner from '../common/LoadingSpinner';
+import { useGoals } from '../../hooks/useGoals';
 import { ArrowPathIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 
 export type SearchResponseMeta = {
@@ -41,6 +42,7 @@ export default function SearchResults({
   const [activeSourceFilter, setActiveSourceFilter] = useState<string>('all');
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortByOption>('relevance');
+  const { goals } = useGoals();
 
   // Compute counts from accumulated results
   const sourceStats = useMemo(() => {
@@ -79,11 +81,49 @@ export default function SearchResults({
     return list;
   }, [results, activeSourceFilter, activeTypeFilter, sortBy]);
 
+  const activeGoals = useMemo(() => goals.filter((goal) => goal.status === 'active'), [goals]);
+
+  const goalMatchIds = useMemo(() => {
+    if (activeGoals.length === 0 || !query) return new Set<string>();
+
+    const normalizedQuery = query.toLowerCase();
+    const goalKeywords = activeGoals.flatMap((goal) => {
+      const parts = [goal.title, goal.description, goal.category, goal.priority1, goal.priority2, goal.priority3]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase());
+      return parts;
+    });
+
+    return new Set(
+      results.filter((item) => {
+        const haystack = [item.title, item.description, item.author, item.tags?.join(' ') || '']
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return goalKeywords.some((keyword) =>
+          keyword && (haystack.includes(keyword) || normalizedQuery.includes(keyword))
+        );
+      }).map((item) => item.id)
+    );
+  }, [activeGoals, query, results]);
+
   // Initial load spinner — only while first request is in-flight and nothing accumulated yet
   if (isLoading && results.length === 0) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <LoadingSpinner />
+      <div className="space-y-4 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="rounded-3xl border border-gray-800 bg-gray-950/80 overflow-hidden">
+              <div className="aspect-video bg-gray-800 animate-pulse" />
+              <div className="p-4 space-y-3">
+                <div className="h-4 w-3/4 rounded bg-gray-800 animate-pulse" />
+                <div className="h-3 w-full rounded bg-gray-800 animate-pulse" />
+                <div className="h-3 w-2/3 rounded bg-gray-800 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -234,7 +274,7 @@ export default function SearchResults({
       )}
 
       <div className="mt-6">
-        <ContentGrid items={processedResults} />
+        <ContentGrid items={processedResults} goalBadgeIds={goalMatchIds} />
       </div>
       <div className="flex justify-center gap-4 mt-8 mb-8 pt-2 border-t border-gray-800/60">
         {onLoadPrevious && limit && limit > 25 && (

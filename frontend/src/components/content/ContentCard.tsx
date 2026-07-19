@@ -14,10 +14,12 @@ export default function ContentCard({
   content,
   onClick,
   priority = false,
+  goalBadge = false,
 }: {
   content: Content;
   onClick?: (content: Content) => void;
   priority?: boolean;
+  goalBadge?: boolean;
 }) {
 
   const sourceColors: Record<string, string> = {
@@ -92,6 +94,12 @@ export default function ContentCard({
         >
           {content.source}
         </span>
+
+        {goalBadge && (
+          <span className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+            Best match
+          </span>
+        )}
       </div>
 
       {/* Details info */}

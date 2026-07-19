@@ -4,7 +4,41 @@ import SearchService from "./search.service";
 import AIGateway from "../ai/gateway";
 
 export class PlaylistService {
+  private static readonly DEFAULT_WATCH_LATER_TITLE = "Watch Later";
+
+  private static async ensureDefaultWatchLaterPlaylist(userId: string) {
+    const { data: existingPlaylists, error: fetchError } = await supabase
+      .from("playlists")
+      .select("id, title")
+      .eq("user_id", userId)
+      .eq("title", this.DEFAULT_WATCH_LATER_TITLE)
+      .limit(1);
+
+    if (fetchError) throw fetchError;
+
+    if (existingPlaylists && existingPlaylists.length > 0) {
+      return existingPlaylists[0];
+    }
+
+    const { data, error } = await supabase
+      .from("playlists")
+      .insert({
+        user_id: userId,
+        title: this.DEFAULT_WATCH_LATER_TITLE,
+        description: "Saved for later",
+        is_public: false,
+        ai_generated: false,
+      })
+      .select("id, title")
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   static async getPlaylists(userId: string) {
+    await this.ensureDefaultWatchLaterPlaylist(userId);
+
     const { data, error } = await supabase
       .from("playlists")
       .select("*")
@@ -16,6 +50,8 @@ export class PlaylistService {
   }
 
   static async getPlaylist(userId: string, playlistId: string) {
+    await this.ensureDefaultWatchLaterPlaylist(userId);
+
     const { data: playlist, error: playlistError } = await supabase
       .from("playlists")
       .select("*")
@@ -135,6 +171,21 @@ export class PlaylistService {
   }
 
   static async deletePlaylist(userId: string, playlistId: string) {
+    const { data: playlist, error: lookupError } = await supabase
+      .from("playlists")
+      .select("id, title")
+      .eq("id", playlistId)
+      .eq("user_id", userId)
+      .single();
+
+    if (lookupError || !playlist) {
+      throw lookupError || new Error("Playlist not found");
+    }
+
+    if (playlist.title === this.DEFAULT_WATCH_LATER_TITLE) {
+      throw new Error("Watch Later playlist cannot be deleted");
+    }
+
     const { error } = await supabase
       .from("playlists")
       .delete()

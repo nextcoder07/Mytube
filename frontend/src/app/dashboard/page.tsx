@@ -1,13 +1,31 @@
 // frontend/src/app/dashboard/page.tsx
-import React from 'react';
-import { ChartBarIcon, FireIcon, PlayCircleIcon, BoltIcon } from '@heroicons/react/24/outline';
-
-export const metadata = {
-  title: 'Dashboard — Mytube',
-  description: 'Your personalized learning dashboard with goals, streak, and AI suggestions.',
-};
+'use client';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChartBarIcon, FireIcon, PlayCircleIcon, BoltIcon, PlayIcon } from '@heroicons/react/24/outline';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../lib/api';
+import { usePlayerStore } from '../../store/player.store';
+import type { Content } from '../../types/content';
 
 export default function DashboardPage() {
+  const { play } = usePlayerStore();
+  const [seenOnboarding, setSeenOnboarding] = useState(true);
+
+  useEffect(() => {
+    const value = window.localStorage.getItem('mytube-onboarding-seen');
+    setSeenOnboarding(Boolean(value));
+  }, []);
+
+  const { data: watchHistory = [] } = useQuery<{ content: Content }[]>({
+    queryKey: ['watchHistory'],
+    queryFn: async () => {
+      const res = await api.get('/history');
+      return res.data?.data || [];
+    },
+  });
+
+  const continueWatching = useMemo(() => watchHistory.slice(0, 4), [watchHistory]);
+
   return (
     <main className="flex-1 p-6 space-y-8">
       {/* Header */}
@@ -35,6 +53,46 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {!seenOnboarding && (
+        <section className="rounded-3xl border border-violet-500/30 bg-violet-600/10 p-5">
+          <h2 className="text-lg font-semibold text-white">Welcome to Mytube</h2>
+          <p className="text-sm text-gray-300 mt-2">Create a goal to unlock a more focused feed, then use Watch Later whenever you want to save something for later.</p>
+          <button
+            onClick={() => {
+              window.localStorage.setItem('mytube-onboarding-seen', 'true');
+              setSeenOnboarding(true);
+            }}
+            className="mt-3 rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Got it
+          </button>
+        </section>
+      )}
+
+      {continueWatching.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-white mb-3">Continue Watching</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {continueWatching.map((entry) => (
+              <button
+                key={entry.content.id}
+                type="button"
+                onClick={() => play(entry.content, continueWatching.map((item) => item.content))}
+                className="glow-card flex items-center gap-3 p-4 text-left"
+              >
+                <div className="rounded-2xl bg-violet-500/10 p-2 border border-violet-500/20">
+                  <PlayIcon className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white line-clamp-2">{entry.content.title}</p>
+                  <p className="text-xs text-gray-400 mt-1">Resume from your history</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Today's Goal */}
       <section>
